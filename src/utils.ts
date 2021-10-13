@@ -39,6 +39,17 @@ export function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig) {
   //   return { default: defaultPhysics() };
 }
 
+export type PropTypesByWord<T_ValueType extends any> = {
+  Goal: T_ValueType;
+  IsMoving: boolean;
+  MoveMode: MoveMode;
+};
+
+
+export type NewProps<T_Name extends string, T_ValueType extends any> = {
+  [K_PropName in keyof PropTypesByWord<T_ValueType> as `${T_Name}${K_PropName}`]: PropTypesByWord<T_ValueType>[K_PropName];
+};
+
 // could make util makeMakerMoverState, that takes a initialValue function (and they type and initial values can be got from that)
 export function makeMoverStateMaker<T_ValueType>(
   getDefaultValue: () => T_ValueType
@@ -60,15 +71,7 @@ export function makeMoverStateMaker<T_ValueType>(
     T_PhysicsNames extends string,
     T_InitialState extends MoverInitialState<T_ValueType, T_PhysicsNames>
   >(newName: T_Name, initialState?: T_InitialState) {
-    type PropTypesByWord = {
-      Goal: T_ValueType;
-      IsMoving: boolean;
-      MoveMode: MoveMode;
-    };
 
-    type NewProps = {
-      [K_PropName in keyof PropTypesByWord as `${T_Name}${K_PropName}`]: PropTypesByWord[K_PropName];
-    };
 
     type MoveConfigNameProp = T_InitialState["moveConfigName"] extends undefined
       ? {}
@@ -79,7 +82,7 @@ export function makeMoverStateMaker<T_ValueType>(
       : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>;
 
     type NewPropsAndValue = Record<T_Name, T_ValueType> &
-      NewProps &
+      NewProps<T_Name, T_ValueType> &
       MoveConfigNameProp &
       MoveConfigsProp;
 

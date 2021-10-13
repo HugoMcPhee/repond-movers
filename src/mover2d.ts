@@ -50,7 +50,32 @@ allow interpolating
 
 const SPRING_STOP_SPEED = 1;
 
-export const mover2dState = makeMoverStateMaker(defaultPosition);
+type MainValueType =  ReturnType<typeof defaultPosition>;
+
+export const mover2dState = makeMoverStateMaker(defaultPosition)  as <
+  T_Name extends string,
+  T_PhysicsNames extends string,
+  T_InitialState extends {
+    value?: MainValueType;    // T_ValueType
+    valueGoal?: MainValueType;  // T_ValueType
+    isMoving?: boolean;
+    moveConfigName?: T_PhysicsNames;
+    moveMode?: MoveMode;
+    moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
+  }
+>(
+  newName: T_Name,
+  initialState?: T_InitialState
+) => Record<T_Name, MainValueType> &
+Record<`${T_Name}Goal`, MainValueType> &
+Record<`${T_Name}IsMoving`, boolean> &
+Record<`${T_Name}MoveMode`, MoveMode> &
+  (T_InitialState["moveConfigName"] extends undefined
+    ? {}
+    : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
+  (T_InitialState["moveConfigs"] extends undefined
+    ? {}
+    : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 
 export function mover2dRefs<T_Name extends string>(
   newName: T_Name,
