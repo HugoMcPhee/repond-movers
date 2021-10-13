@@ -1,0 +1,27 @@
+{
+  "name": "movers",
+  "version": "0.5.0",
+  "description": "movers for concepto",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npx tsc",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoMcPhee/movers.git"
+  },
+  "keywords": [],
+  "author": "Hugo McPhee",
+  "license": "",
+  "devDependencies": {
+    "@types/react": "^17.0.28",
+    "react": "^17.0.2",
+    "typescript": "^4.4.3",
+    "shutils": "git+https://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@github.com/HugoMcPhee/shutils.git#v0.3.1"
+  }
+}
