@@ -1,7 +1,7 @@
 {
-  "name": "movers",
-  "version": "0.5.1",
-  "description": "movers for concepto",
+  "name": "concep-movers",
+  "version": "0.5.2",
+  "description": "movers for concep",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HugoMcPhee/movers.git"
+    "url": "git+https://github.com/HugoMcPhee/concep-movers.git"
   },
   "keywords": [],
   "author": "Hugo McPhee",
