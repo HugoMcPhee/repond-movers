@@ -1,6 +1,6 @@
 {
   "name": "concep-movers",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "movers for concep",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,8 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "npx tsc",
-    "prepare": "npm run build"
+    "build": "npx tsc"
   },
   "repository": {
     "type": "git",
