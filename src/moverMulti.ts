@@ -1,7 +1,7 @@
-// import { interpolateValues } from "shutils/dist/numbers";
-import { addToLimitedArray } from "shutils/dist/arrays";
-import { forEach } from "shutils/dist/loops";
-import { getAverageSpeed } from "shutils/dist/speedAngleDistance";
+// import { interpolateValues } from "chootils/dist/numbers";
+import { addToLimitedArray } from "chootils/dist/arrays";
+import { forEach } from "chootils/dist/loops";
+import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 /*
 like mover 1d, but has a dynamic amount of movers
 

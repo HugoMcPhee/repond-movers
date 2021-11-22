@@ -1,4 +1,4 @@
-import { defaultPosition, Point3D } from "shutils/dist/points3d";
+import { defaultPosition, Point3D } from "chootils/dist/points3d";
 import { MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
 export declare type PositionAndVelocity = {
     position: Point3D;

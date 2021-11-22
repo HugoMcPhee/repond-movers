@@ -1,8 +1,8 @@
-import { addToLimitedArray } from "shutils/dist/arrays";
-import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "shutils/dist/points3d";
-import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "shutils/dist/points3dInPlace";
-import { getAverageSpeed } from "shutils/dist/speedAngleDistance";
-import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "shutils/dist/speedAngleDistance3d";
+import { addToLimitedArray } from "chootils/dist/arrays";
+import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "chootils/dist/points3d";
+import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "chootils/dist/points3dInPlace";
+import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
+import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance3d";
 import { defaultOptions, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
 const SPRING_STOP_SPEED = 0.7;

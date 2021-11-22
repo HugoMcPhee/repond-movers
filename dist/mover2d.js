@@ -1,8 +1,8 @@
-import { addToLimitedArray } from "shutils/dist/arrays";
-import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "shutils/dist/points2d";
-import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "shutils/dist/points2dInPlace";
-import { getAverageSpeed } from "shutils/dist/speedAngleDistance";
-import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "shutils/dist/speedAngleDistance2d";
+import { addToLimitedArray } from "chootils/dist/arrays";
+import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "chootils/dist/points2d";
+import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "chootils/dist/points2dInPlace";
+import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
+import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance2d";
 import { defaultOptions, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
 /*

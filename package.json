@@ -1,6 +1,6 @@
 {
   "name": "concep-movers",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "movers for concep",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,8 +19,8 @@
   "license": "",
   "devDependencies": {
     "@types/react": "^17.0.28",
+    "chootils": "^0.3.3",
     "react": "^17.0.2",
-    "typescript": "^4.4.3",
-    "shutils": "git+https://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@github.com/HugoMcPhee/shutils.git#v0.3.2"
+    "typescript": "^4.4.3"
   }
 }

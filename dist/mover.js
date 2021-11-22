@@ -1,5 +1,5 @@
-import { addToLimitedArray } from "shutils/dist/arrays";
-import { getAverageSpeed } from "shutils/dist/speedAngleDistance";
+import { addToLimitedArray } from "chootils/dist/arrays";
+import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { defaultOptions, 
 // maximumFrameTime,
 physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";

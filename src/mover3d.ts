@@ -1,4 +1,4 @@
-import { addToLimitedArray } from "shutils/dist/arrays";
+import { addToLimitedArray } from "chootils/dist/arrays";
 import {
   addPoints as addPointsImmutable,
   copyPoint,
@@ -7,19 +7,19 @@ import {
   Point3D,
   subtractPointsSafer,
   updatePoint,
-} from "shutils/dist/points3d";
+} from "chootils/dist/points3d";
 import {
   addPoints,
   dividePoint,
   multiplyPoint,
   subtractPoints,
-} from "shutils/dist/points3dInPlace";
-import { getAverageSpeed } from "shutils/dist/speedAngleDistance";
+} from "chootils/dist/points3dInPlace";
+import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import {
   getSpeedAndAngleFromVector,
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
-} from "shutils/dist/speedAngleDistance3d";
+} from "chootils/dist/speedAngleDistance3d";
 import {
   defaultOptions,
   physicsTimestep,

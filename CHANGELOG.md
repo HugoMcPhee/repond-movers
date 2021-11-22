@@ -1,7 +1,15 @@
+TODO
+
+- update mover2d and mover3d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
+
+v0.5.5
+
+- uses renamed chootils
+- published as npm packge
+
 v0.5.3
 
 - include dist folder so installing's not needed
-- TODO update mover2d and mover3d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
 
 v0.5.0
 
