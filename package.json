@@ -1,7 +1,7 @@
 {
-  "name": "concep-movers",
-  "version": "0.5.5",
-  "description": "movers for concep",
+  "name": "pietem-movers",
+  "version": "0.5.6",
+  "description": "movers for pietem",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -12,9 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HugoMcPhee/concep-movers.git"
+    "url": "git+https://github.com/HugoMcPhee/pietem-movers.git"
   },
-  "keywords": [],
+  "keywords": [
+    "pietiem",
+    "animation",
+    "animate",
+    "spring",
+    "motion"
+  ],
   "author": "Hugo McPhee",
   "license": "",
   "devDependencies": {
