@@ -43,7 +43,7 @@ export type PositionAndVelocity = {
   velocity: Point3D;
 };
 
-const SPRING_STOP_SPEED = 0.7;
+const SPRING_STOP_SPEED = 0.5;
 
 type MainValueType =  ReturnType<typeof defaultPosition>;
 
@@ -206,9 +206,24 @@ export function makeMover3dUtils<
       itemState[keys.moveMode] === "slide";
 
     let shouldKeepMoving = true;
-    if (isAutoMovementType)
-      shouldKeepMoving =
-        itemState[keys.isMoving] && averageSpeed > SPRING_STOP_SPEED;
+    if (isAutoMovementType) {
+
+      const targetPointDifference = subtractPointsSafer(
+        newPosition,
+        targetPosition
+      );
+
+      const isGoingFasterThanStopSpeed = averageSpeed > SPRING_STOP_SPEED
+      const quickDistance = Math.abs(targetPointDifference.x) + Math.abs(targetPointDifference.y) +  Math.abs(targetPointDifference.z)
+      const isQuiteClose = (quickDistance ) <  0.15
+
+      if (isGoingFasterThanStopSpeed) {
+        shouldKeepMoving = itemState[keys.isMoving]
+      } else {
+        shouldKeepMoving =
+        itemState[keys.isMoving] && !isQuiteClose;
+      }
+    }
 
     if (!shouldKeepMoving)
       setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });

@@ -1,6 +1,10 @@
 TODO
 
-- update mover2d and mover3d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
+- update mover2d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
+
+v0.5.7
+
+- mover3d supports more precision when stopping
 
 v0.5.5
 

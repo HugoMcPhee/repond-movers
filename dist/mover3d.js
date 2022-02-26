@@ -5,7 +5,7 @@ import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance3d";
 import { defaultOptions, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
-const SPRING_STOP_SPEED = 0.7;
+const SPRING_STOP_SPEED = 0.5;
 export const mover3dState = makeMoverStateMaker(defaultPosition);
 export function mover3dRefs(newName, config) {
     const newRefs = {
@@ -72,9 +72,19 @@ export function makeMover3dUtils(conceptoFuncs) {
         const isAutoMovementType = itemState[keys.moveMode] === "spring" ||
             itemState[keys.moveMode] === "slide";
         let shouldKeepMoving = true;
-        if (isAutoMovementType)
-            shouldKeepMoving =
-                itemState[keys.isMoving] && averageSpeed > SPRING_STOP_SPEED;
+        if (isAutoMovementType) {
+            const targetPointDifference = subtractPointsSafer(newPosition, targetPosition);
+            const isGoingFasterThanStopSpeed = averageSpeed > SPRING_STOP_SPEED;
+            const quickDistance = Math.abs(targetPointDifference.x) + Math.abs(targetPointDifference.y) + Math.abs(targetPointDifference.z);
+            const isQuiteClose = (quickDistance) < 0.15;
+            if (isGoingFasterThanStopSpeed) {
+                shouldKeepMoving = itemState[keys.isMoving];
+            }
+            else {
+                shouldKeepMoving =
+                    itemState[keys.isMoving] && !isQuiteClose;
+            }
+        }
         if (!shouldKeepMoving)
             setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
         setState((state) => {
