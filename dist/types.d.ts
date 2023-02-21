@@ -5,10 +5,12 @@ export declare type PhysicsOptions = {
     damping: number;
     friction: number;
 };
+export declare type MoverMode = "1d" | "2d" | "3d" | "multi";
 export declare type OnePhysicsConfig = {
     mass: number;
     stiffness: number;
     damping: number;
+    stopSpeed: number;
     friction: number;
 };
 export declare type TempStateNameProperty = string;
@@ -25,6 +27,7 @@ declare type MultipleConfigsOption = Record<string, OnePhysicsConfigOptions> & {
     mass?: undefined;
     stiffness?: undefined;
     damping?: undefined;
+    stopSpeed?: undefined;
     friction?: undefined;
 };
 export declare type PhysicsConfig = undefined | OnePhysicsConfigOptions | MultipleConfigsOption;

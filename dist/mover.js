@@ -1,17 +1,18 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
-import { defaultOptions, 
+import { defaultOptions, defaultPhysics, 
 // maximumFrameTime,
 physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("1d").stopSpeed;
 // manually retyped because d.ts had some trouble with nested functions?
-export const moverState = (makeMoverStateMaker(() => 0));
+export const moverState = makeMoverStateMaker(() => 0);
 export function moverRefs(newName, config) {
     const newRefs = {
         velocity: 0,
         recentSpeeds: [],
         stateNames: makeStateNames(newName),
-        physicsConfigs: normalizeDefinedPhysicsConfig(config),
+        physicsConfigs: normalizeDefinedPhysicsConfig(config, "1d"),
     };
     return {
         [`${newName}MoverRefs`]: newRefs,
@@ -20,8 +21,15 @@ export function moverRefs(newName, config) {
 export function makeMover1dUtils(conceptoFuncs) {
     const { getRefs, getState, setState } = conceptoFuncs;
     // ---------------------------
+    const rerunOptions = {
+        frameDuration: 16.6667,
+        name: "",
+        type: "",
+        onSlow: undefined,
+        mover: "",
+    };
     function runMover({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, }) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         // repeated for all movers Start
         const itemRefs = getRefs()[itemType][itemId];
         const itemState = getState()[itemType][itemId];
@@ -43,6 +51,7 @@ export function makeMover1dUtils(conceptoFuncs) {
         // repeated for all movers End
         prevStepState.position = currentStepState.position;
         prevStepState.velocity = currentStepState.velocity;
+        const springStopSpeed = (_d = physicsOptions.stopSpeed) !== null && _d !== void 0 ? _d : DEFAULT_SPRING_STOP_SPEED;
         while (timeRemainingForPhysics >= physicsTimestep) {
             // prevStepState = currentStepState;
             // currentStepState = runPhysicsStep(
@@ -69,7 +78,7 @@ export function makeMover1dUtils(conceptoFuncs) {
         let isStillMoving = Math.abs(averageSpeed) > 0.003;
         let shouldStopMoving = !isStillMoving;
         if (moveMode === "spring") {
-            let isStillMoving = Math.abs(averageSpeed) > 0.01;
+            let isStillMoving = Math.abs(averageSpeed) > springStopSpeed;
             shouldStopMoving = !isStillMoving && isNearTarget;
         }
         if (shouldStopMoving) {
@@ -80,12 +89,11 @@ export function makeMover1dUtils(conceptoFuncs) {
         setState({ [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } }, (nextFrameDuration) => {
             const newItemState = getState()[itemType][itemId];
             if (newItemState === null || newItemState === void 0 ? void 0 : newItemState[keys.isMoving]) {
-                runMover({
-                    frameDuration: nextFrameDuration,
-                    name: itemId,
-                    type: itemType,
-                    mover: moverName,
-                });
+                rerunOptions.frameDuration = nextFrameDuration;
+                rerunOptions.name = itemId;
+                rerunOptions.type = itemType;
+                rerunOptions.mover = moverName;
+                runMover(rerunOptions);
             }
         });
     }

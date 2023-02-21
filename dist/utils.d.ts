@@ -1,5 +1,5 @@
-import { DefinedPhysicsConfig, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
-export declare function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig): DefinedPhysicsConfig;
+import { DefinedPhysicsConfig, MoveMode, MoverMode, PhysicsConfig, PhysicsOptions } from "./types";
+export declare function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig, mode: MoverMode): DefinedPhysicsConfig;
 export declare type PropTypesByWord<T_ValueType extends any> = {
     Goal: T_ValueType;
     IsMoving: boolean;

@@ -5,6 +5,8 @@ import {
   defaultPosition,
   interpolatePoints,
   Point3D,
+  pointIsZero,
+  pointBasicallyZero,
   subtractPointsSafer,
   updatePoint,
 } from "chootils/dist/points3d";
@@ -22,6 +24,7 @@ import {
 } from "chootils/dist/speedAngleDistance3d";
 import {
   defaultOptions,
+  defaultPhysics,
   physicsTimestep,
   physicsTimestepInSeconds,
   recentSpeedsAmount,
@@ -43,16 +46,16 @@ export type PositionAndVelocity = {
   velocity: Point3D;
 };
 
-const SPRING_STOP_SPEED = 0.5;
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("3d").stopSpeed;
 
-type MainValueType =  ReturnType<typeof defaultPosition>;
+type MainValueType = ReturnType<typeof defaultPosition>;
 
 export const mover3dState = makeMoverStateMaker(defaultPosition) as <
   T_Name extends string,
   T_PhysicsNames extends string,
   T_InitialState extends {
-    value?: MainValueType;    // T_ValueType
-    valueGoal?: MainValueType;  // T_ValueType
+    value?: MainValueType; // T_ValueType
+    valueGoal?: MainValueType; // T_ValueType
     isMoving?: boolean;
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
@@ -62,9 +65,9 @@ export const mover3dState = makeMoverStateMaker(defaultPosition) as <
   newName: T_Name,
   initialState?: T_InitialState
 ) => Record<T_Name, MainValueType> &
-Record<`${T_Name}Goal`, MainValueType> &
-Record<`${T_Name}IsMoving`, boolean> &
-Record<`${T_Name}MoveMode`, MoveMode> &
+  Record<`${T_Name}Goal`, MainValueType> &
+  Record<`${T_Name}IsMoving`, boolean> &
+  Record<`${T_Name}MoveMode`, MoveMode> &
   (T_InitialState["moveConfigName"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
@@ -82,7 +85,7 @@ export function mover3dRefs<T_Name extends string>(
     averageSpeed: 0,
     canRunOnSlow: true,
     stateNames: makeStateNames(newName),
-    physicsConfigs: normalizeDefinedPhysicsConfig(config),
+    physicsConfigs: normalizeDefinedPhysicsConfig(config, "3d"),
   };
 
   return {
@@ -123,6 +126,14 @@ export function makeMover3dUtils<
   };
   // ---------------------------
 
+  const rerunOptions: RunMoverOptions<any> = {
+    frameDuration: 16.6667,
+    name: "",
+    type: "",
+    onSlow: undefined,
+    mover: "",
+  };
+
   function runMover3d<T_ItemType extends ItemType>({
     frameDuration = 16.6667,
     name: itemId,
@@ -159,6 +170,9 @@ export function makeMover3dUtils<
     // repeated for all movers End
 
     const originalPositon = copyPoint(itemState[keys.value]);
+
+    const springStopSpeed =
+      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
@@ -204,24 +218,28 @@ export function makeMover3dUtils<
     const isAutoMovementType =
       itemState[keys.moveMode] === "spring" ||
       itemState[keys.moveMode] === "slide";
+    // NOTE was it needed to check the latest state here?
+
+    // const isAutoMovementType = moveMode === "spring" || moveMode === "slide";
 
     let shouldKeepMoving = true;
     if (isAutoMovementType) {
-
       const targetPointDifference = subtractPointsSafer(
         newPosition,
         targetPosition
       );
 
-      const isGoingFasterThanStopSpeed = averageSpeed > SPRING_STOP_SPEED
-      const quickDistance = Math.abs(targetPointDifference.x) + Math.abs(targetPointDifference.y) +  Math.abs(targetPointDifference.z)
-      const isQuiteClose = (quickDistance ) <  0.15
+      const isGoingFasterThanStopSpeed = averageSpeed > springStopSpeed;
+      const quickDistance =
+        Math.abs(targetPointDifference.x) +
+        Math.abs(targetPointDifference.y) +
+        Math.abs(targetPointDifference.z);
+      const isQuiteClose = quickDistance < 0.15;
 
       if (isGoingFasterThanStopSpeed) {
-        shouldKeepMoving = itemState[keys.isMoving]
+        shouldKeepMoving = itemState[keys.isMoving];
       } else {
-        shouldKeepMoving =
-        itemState[keys.isMoving] && !isQuiteClose;
+        shouldKeepMoving = itemState[keys.isMoving] && !isQuiteClose;
       }
     }
 
@@ -241,7 +259,21 @@ export function makeMover3dUtils<
           currentPosition,
           positionDifference
         );
+        // console.log("diff", Math.abs(positionDifference.x));
 
+        // if (moveMode === "push" || moveMode === "slide") {
+        // console.log("moveMode", moveMode);
+
+        if (pointIsZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
+
+        if (pointBasicallyZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
+        // }
+
+        // console.log(positionDifference, "positionDifference");
         return {
           [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
         };
@@ -255,13 +287,13 @@ export function makeMover3dUtils<
         }
 
         if (itemState[keys.isMoving]) {
-          runMover3d({
-            frameDuration: nextFrameDuration,
-            name: itemId,
-            type: itemType,
-            onSlow,
-            mover: moverName,
-          });
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.name = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.onSlow = onSlow;
+          rerunOptions.mover = moverName;
+
+          runMover3d(rerunOptions);
         }
       }
     );

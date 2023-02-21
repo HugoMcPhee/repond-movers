@@ -2,13 +2,17 @@ import { defaultPhysics } from "./consts";
 import {
   DefinedPhysicsConfig,
   MoveMode,
+  MoverMode,
   PhysicsConfig,
   PhysicsOptions,
 } from "./types";
 
-export function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig) {
+export function normalizeDefinedPhysicsConfig(
+  theConfig: PhysicsConfig,
+  mode: MoverMode
+) {
   if (theConfig === undefined) {
-    return { default: { ...defaultPhysics() } };
+    return { default: { ...defaultPhysics(mode) } };
   }
   if (typeof theConfig === "string") {
     return undefined;
@@ -18,17 +22,18 @@ export function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig) {
     theConfig.damping !== undefined ||
     theConfig.friction !== undefined ||
     theConfig.mass !== undefined ||
-    theConfig.stiffness !== undefined
+    theConfig.stiffness !== undefined ||
+    theConfig.stopSpeed !== undefined
   ) {
     // is a single config
-    return { default: { ...defaultPhysics(), ...theConfig } };
+    return { default: { ...defaultPhysics(mode), ...theConfig } };
   } else {
     const normalizedMultiConfig: DefinedPhysicsConfig = {};
 
     const multiConfigKeys = Object.keys(theConfig);
     multiConfigKeys.forEach((loopedKey) => {
       normalizedMultiConfig[loopedKey] = {
-        ...defaultPhysics(),
+        ...defaultPhysics(mode),
         ...theConfig[loopedKey],
       };
     });
@@ -44,7 +49,6 @@ export type PropTypesByWord<T_ValueType extends any> = {
   IsMoving: boolean;
   MoveMode: MoveMode;
 };
-
 
 export type NewProps<T_Name extends string, T_ValueType extends any> = {
   [K_PropName in keyof PropTypesByWord<T_ValueType> as `${T_Name}${K_PropName}`]: PropTypesByWord<T_ValueType>[K_PropName];
@@ -71,8 +75,6 @@ export function makeMoverStateMaker<T_ValueType>(
     T_PhysicsNames extends string,
     T_InitialState extends MoverInitialState<T_ValueType, T_PhysicsNames>
   >(newName: T_Name, initialState?: T_InitialState) {
-
-
     type MoveConfigNameProp = T_InitialState["moveConfigName"] extends undefined
       ? {}
       : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>;

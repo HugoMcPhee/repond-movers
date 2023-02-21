@@ -5,6 +5,8 @@ import {
   defaultPosition,
   interpolatePoints,
   Point2D,
+  pointBasicallyZero,
+  pointIsZero,
   subtractPointsSafer,
   updatePoint,
 } from "chootils/dist/points2d";
@@ -22,6 +24,7 @@ import {
 } from "chootils/dist/speedAngleDistance2d";
 import {
   defaultOptions,
+  defaultPhysics,
   physicsTimestep,
   physicsTimestepInSeconds,
   recentSpeedsAmount,
@@ -48,16 +51,16 @@ New options:
 allow interpolating
 */
 
-const SPRING_STOP_SPEED = 1;
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("2d").stopSpeed;
 
-type MainValueType =  ReturnType<typeof defaultPosition>;
+type MainValueType = ReturnType<typeof defaultPosition>;
 
-export const mover2dState = makeMoverStateMaker(defaultPosition)  as <
+export const mover2dState = makeMoverStateMaker(defaultPosition) as <
   T_Name extends string,
   T_PhysicsNames extends string,
   T_InitialState extends {
-    value?: MainValueType;    // T_ValueType
-    valueGoal?: MainValueType;  // T_ValueType
+    value?: MainValueType; // T_ValueType
+    valueGoal?: MainValueType; // T_ValueType
     isMoving?: boolean;
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
@@ -67,9 +70,9 @@ export const mover2dState = makeMoverStateMaker(defaultPosition)  as <
   newName: T_Name,
   initialState?: T_InitialState
 ) => Record<T_Name, MainValueType> &
-Record<`${T_Name}Goal`, MainValueType> &
-Record<`${T_Name}IsMoving`, boolean> &
-Record<`${T_Name}MoveMode`, MoveMode> &
+  Record<`${T_Name}Goal`, MainValueType> &
+  Record<`${T_Name}IsMoving`, boolean> &
+  Record<`${T_Name}MoveMode`, MoveMode> &
   (T_InitialState["moveConfigName"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
@@ -87,7 +90,7 @@ export function mover2dRefs<T_Name extends string>(
     averageSpeed: 0,
     canRunOnSlow: true,
     stateNames: makeStateNames(newName),
-    physicsConfigs: normalizeDefinedPhysicsConfig(config),
+    physicsConfigs: normalizeDefinedPhysicsConfig(config, "2d"),
   };
 
   return {
@@ -128,6 +131,14 @@ export function makeMover2dUtils<
   };
   // ---------------------------
 
+  const rerunOptions: RunMoverOptions<any> = {
+    frameDuration: 16.6667,
+    name: "",
+    type: "",
+    onSlow: undefined,
+    mover: "",
+  };
+
   function runMover2d<T_ItemType extends ItemType>({
     frameDuration = 16.6667,
     name: itemId,
@@ -165,7 +176,11 @@ export function makeMover2dUtils<
     let timeRemainingForPhysics = frameDuration;
     // repeated for all movers End
 
+    // TODO could use a ref for this value, and copy into it
     const originalPositon = copyPoint(itemState[keys.value]);
+
+    const springStopSpeed =
+      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
@@ -211,10 +226,14 @@ export function makeMover2dUtils<
     let shouldKeepMoving = true;
     if (isAutoMovementType)
       shouldKeepMoving =
-        itemState[keys.isMoving] && averageSpeed > SPRING_STOP_SPEED;
+        itemState[keys.isMoving] && averageSpeed > springStopSpeed;
+    // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
 
-    if (!shouldKeepMoving)
+    if (!shouldKeepMoving) {
+      // console.log("shouldKeepMoving", shouldKeepMoving);
+
       setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+    }
 
     setState(
       (state) => {
@@ -223,10 +242,20 @@ export function makeMover2dUtils<
           newPosition,
           originalPositon
         );
+
+        if (pointIsZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
+
+        if (pointBasicallyZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
+
         const actualNewPosition = addPointsImmutable(
           currentPosition,
           positionDifference
         );
+
         return {
           [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
         };
@@ -245,13 +274,13 @@ export function makeMover2dUtils<
           // the next frame mover always runs at the very start of the next frame
           // could add a fow option to movers to react to a frame tick on specific frame
 
-          runMover2d({
-            frameDuration: nextFrameDuration,
-            name: itemId,
-            type: itemType,
-            onSlow,
-            mover: moverName,
-          });
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.name = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.onSlow = onSlow;
+          rerunOptions.mover = moverName;
+
+          runMover2d(rerunOptions);
         }
       }
     );

@@ -10,10 +10,13 @@ export type PhysicsOptions = {
   friction: number;
 };
 
+export type MoverMode = "1d" | "2d" | "3d" | "multi";
+
 export type OnePhysicsConfig = {
   mass: number;
   stiffness: number;
   damping: number;
+  stopSpeed: number; // spring
   friction: number; // sliding
 };
 
@@ -31,6 +34,7 @@ type MultipleConfigsOption = Record<string, OnePhysicsConfigOptions> & {
   mass?: undefined;
   stiffness?: undefined;
   damping?: undefined;
+  stopSpeed?: undefined;
   friction?: undefined;
 };
 

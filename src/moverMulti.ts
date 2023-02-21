@@ -63,7 +63,7 @@ export function moverMultiRefs<
 
   const newRefs = {
     stateNames: makeStateNames(newName),
-    physicsConfigs: normalizeDefinedPhysicsConfig(config),
+    physicsConfigs: normalizeDefinedPhysicsConfig(config, "multi"),
     animRefs: _animRefs as Record<AnimName, OneAnimRefs>,
     animNames,
   };
@@ -105,6 +105,14 @@ export function makeMoverMultiUtils<
     mover: StateNameProperty<T_ItemType>;
   };
   // ---------------------------
+
+  const rerunOptions: RunMoverOptions<any> = {
+    frameDuration: 16.6667,
+    name: "",
+    type: "",
+    onSlow: undefined,
+    mover: "",
+  };
 
   function runMoverMulti<T_ItemType extends ItemType>({
     frameDuration = 16.6667,
@@ -157,12 +165,8 @@ export function makeMoverMultiUtils<
 
       while (timeRemainingForPhysics >= physicsTimestep) {
         // prevStepState = nowStepState;
-        nowStepState = runPhysicsStep(
-          nowStepState,
-          targetPosition,
-          moveMode,
-          physicsOptions
-        );
+        // nowStepState = runPhysicsStep(
+        runPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
         timeRemainingForPhysics -= physicsTimestep;
       }
 
@@ -214,12 +218,12 @@ export function makeMoverMultiUtils<
       (nextFrameDuration) => {
         const newItemState = (getState() as any)[itemType][itemId];
         if (newItemState?.[keys.isMoving]) {
-          runMoverMulti({
-            frameDuration: nextFrameDuration,
-            name: itemId,
-            type: itemType,
-            mover: moverName,
-          });
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.name = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.mover = moverName;
+
+          runMoverMulti(rerunOptions);
         }
       }
     );
@@ -230,7 +234,7 @@ export function makeMoverMultiUtils<
     targetPosition: number,
     moveMode: MoveMode = "spring",
     physicsOptions: any
-  ): { position: number; velocity: number } {
+  ) {
     const { stiffness, damping, mass, friction } = physicsOptions;
 
     let newVelocity: number = nowStepState.velocity;
@@ -262,7 +266,11 @@ export function makeMoverMultiUtils<
 
     const amountMoved = newVelocity * physicsTimestepInSeconds;
     let newAmount = nowStepState.position + amountMoved;
-    return { position: newAmount, velocity: newVelocity };
+
+    nowStepState.position = newAmount;
+    nowStepState.velocity = newVelocity;
+
+    // return { position: newAmount, velocity: newVelocity };
   }
 
   return {

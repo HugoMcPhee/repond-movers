@@ -28,7 +28,7 @@ export function moverMultiRefs(newName, animNames, config) {
     });
     const newRefs = {
         stateNames: makeStateNames(newName),
-        physicsConfigs: normalizeDefinedPhysicsConfig(config),
+        physicsConfigs: normalizeDefinedPhysicsConfig(config, "multi"),
         animRefs: _animRefs,
         animNames,
     };
@@ -39,6 +39,13 @@ export function moverMultiRefs(newName, animNames, config) {
 export function makeMoverMultiUtils(conceptoFuncs) {
     const { getRefs, getState, setState } = conceptoFuncs;
     // ---------------------------
+    const rerunOptions = {
+        frameDuration: 16.6667,
+        name: "",
+        type: "",
+        onSlow: undefined,
+        mover: "",
+    };
     function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, }) {
         var _a, _b, _c;
         // repeated for all movers Start
@@ -67,7 +74,8 @@ export function makeMoverMultiUtils(conceptoFuncs) {
             // repeated for all movers End
             while (timeRemainingForPhysics >= physicsTimestep) {
                 // prevStepState = nowStepState;
-                nowStepState = runPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
+                // nowStepState = runPhysicsStep(
+                runPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
                 timeRemainingForPhysics -= physicsTimestep;
             }
             // TODO maybe set the new position based on the current position like mover 3d
@@ -101,12 +109,11 @@ export function makeMoverMultiUtils(conceptoFuncs) {
         setState({ [itemType]: { [itemId]: { [keys.value]: newMoverState } } }, (nextFrameDuration) => {
             const newItemState = getState()[itemType][itemId];
             if (newItemState === null || newItemState === void 0 ? void 0 : newItemState[keys.isMoving]) {
-                runMoverMulti({
-                    frameDuration: nextFrameDuration,
-                    name: itemId,
-                    type: itemType,
-                    mover: moverName,
-                });
+                rerunOptions.frameDuration = nextFrameDuration;
+                rerunOptions.name = itemId;
+                rerunOptions.type = itemType;
+                rerunOptions.mover = moverName;
+                runMoverMulti(rerunOptions);
             }
         });
     }
@@ -138,7 +145,9 @@ export function makeMoverMultiUtils(conceptoFuncs) {
         }
         const amountMoved = newVelocity * physicsTimestepInSeconds;
         let newAmount = nowStepState.position + amountMoved;
-        return { position: newAmount, velocity: newVelocity };
+        nowStepState.position = newAmount;
+        nowStepState.velocity = newVelocity;
+        // return { position: newAmount, velocity: newVelocity };
     }
     return {
         moverMultiRefs,

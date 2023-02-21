@@ -1,7 +1,7 @@
 import { defaultPhysics } from "./consts";
-export function normalizeDefinedPhysicsConfig(theConfig) {
+export function normalizeDefinedPhysicsConfig(theConfig, mode) {
     if (theConfig === undefined) {
-        return { default: { ...defaultPhysics() } };
+        return { default: { ...defaultPhysics(mode) } };
     }
     if (typeof theConfig === "string") {
         return undefined;
@@ -9,16 +9,17 @@ export function normalizeDefinedPhysicsConfig(theConfig) {
     if (theConfig.damping !== undefined ||
         theConfig.friction !== undefined ||
         theConfig.mass !== undefined ||
-        theConfig.stiffness !== undefined) {
+        theConfig.stiffness !== undefined ||
+        theConfig.stopSpeed !== undefined) {
         // is a single config
-        return { default: { ...defaultPhysics(), ...theConfig } };
+        return { default: { ...defaultPhysics(mode), ...theConfig } };
     }
     else {
         const normalizedMultiConfig = {};
         const multiConfigKeys = Object.keys(theConfig);
         multiConfigKeys.forEach((loopedKey) => {
             normalizedMultiConfig[loopedKey] = {
-                ...defaultPhysics(),
+                ...defaultPhysics(mode),
                 ...theConfig[loopedKey],
             };
         });

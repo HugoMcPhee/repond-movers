@@ -1,6 +1,13 @@
 TODO
 
 - update mover2d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
+- use position pool objects where copyPoint is used, (like for prevStepState & currentStepState)
+
+v0.6.0
+
+- some updates to help with garbage collection by reusing objecs
+- supports custom stop speeds to work with smaller or higher values (like 0.0 - 1.0)
+- will stop moving is the movement speed is 0 or very close to 0 (hopefully wont have side effects for springs that slow and speedup again)
 
 v0.5.7
 

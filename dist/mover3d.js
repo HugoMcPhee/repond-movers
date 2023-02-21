@@ -1,11 +1,11 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
-import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "chootils/dist/points3d";
+import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, pointIsZero, pointBasicallyZero, subtractPointsSafer, updatePoint, } from "chootils/dist/points3d";
 import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "chootils/dist/points3dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance3d";
-import { defaultOptions, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
+import { defaultOptions, defaultPhysics, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
-const SPRING_STOP_SPEED = 0.5;
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("3d").stopSpeed;
 export const mover3dState = makeMoverStateMaker(defaultPosition);
 export function mover3dRefs(newName, config) {
     const newRefs = {
@@ -14,7 +14,7 @@ export function mover3dRefs(newName, config) {
         averageSpeed: 0,
         canRunOnSlow: true,
         stateNames: makeStateNames(newName),
-        physicsConfigs: normalizeDefinedPhysicsConfig(config),
+        physicsConfigs: normalizeDefinedPhysicsConfig(config, "3d"),
     };
     return {
         [`${newName}MoverRefs`]: newRefs,
@@ -23,8 +23,15 @@ export function mover3dRefs(newName, config) {
 export function makeMover3dUtils(conceptoFuncs) {
     const { getRefs, getState, setState } = conceptoFuncs;
     // ---------------------------
+    const rerunOptions = {
+        frameDuration: 16.6667,
+        name: "",
+        type: "",
+        onSlow: undefined,
+        mover: "",
+    };
     function runMover3d({ frameDuration = 16.6667, name: itemId, type: itemType, onSlow, mover: moverName, }) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         // repeated for all movers Start
         const itemRefs = getRefs()[itemType][itemId];
         const itemState = getState()[itemType][itemId];
@@ -45,6 +52,7 @@ export function makeMover3dUtils(conceptoFuncs) {
         let timeRemainingForPhysics = frameDuration;
         // repeated for all movers End
         const originalPositon = copyPoint(itemState[keys.value]);
+        const springStopSpeed = (_d = physicsOptions.stopSpeed) !== null && _d !== void 0 ? _d : DEFAULT_SPRING_STOP_SPEED;
         while (timeRemainingForPhysics >= physicsTimestep) {
             // prevStepState = currentStepState;
             updatePoint(prevStepState.position, currentStepState.position);
@@ -71,18 +79,21 @@ export function makeMover3dUtils(conceptoFuncs) {
         moverRefs.averageSpeed = averageSpeed;
         const isAutoMovementType = itemState[keys.moveMode] === "spring" ||
             itemState[keys.moveMode] === "slide";
+        // NOTE was it needed to check the latest state here?
+        // const isAutoMovementType = moveMode === "spring" || moveMode === "slide";
         let shouldKeepMoving = true;
         if (isAutoMovementType) {
             const targetPointDifference = subtractPointsSafer(newPosition, targetPosition);
-            const isGoingFasterThanStopSpeed = averageSpeed > SPRING_STOP_SPEED;
-            const quickDistance = Math.abs(targetPointDifference.x) + Math.abs(targetPointDifference.y) + Math.abs(targetPointDifference.z);
-            const isQuiteClose = (quickDistance) < 0.15;
+            const isGoingFasterThanStopSpeed = averageSpeed > springStopSpeed;
+            const quickDistance = Math.abs(targetPointDifference.x) +
+                Math.abs(targetPointDifference.y) +
+                Math.abs(targetPointDifference.z);
+            const isQuiteClose = quickDistance < 0.15;
             if (isGoingFasterThanStopSpeed) {
                 shouldKeepMoving = itemState[keys.isMoving];
             }
             else {
-                shouldKeepMoving =
-                    itemState[keys.isMoving] && !isQuiteClose;
+                shouldKeepMoving = itemState[keys.isMoving] && !isQuiteClose;
             }
         }
         if (!shouldKeepMoving)
@@ -91,6 +102,17 @@ export function makeMover3dUtils(conceptoFuncs) {
             const currentPosition = state[itemType][itemId][keys.value];
             const positionDifference = subtractPointsSafer(newPosition, originalPositon);
             const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
+            // console.log("diff", Math.abs(positionDifference.x));
+            // if (moveMode === "push" || moveMode === "slide") {
+            // console.log("moveMode", moveMode);
+            if (pointIsZero(positionDifference)) {
+                return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+            }
+            if (pointBasicallyZero(positionDifference)) {
+                return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+            }
+            // }
+            // console.log(positionDifference, "positionDifference");
             return {
                 [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
             };
@@ -102,13 +124,12 @@ export function makeMover3dUtils(conceptoFuncs) {
                 }
             }
             if (itemState[keys.isMoving]) {
-                runMover3d({
-                    frameDuration: nextFrameDuration,
-                    name: itemId,
-                    type: itemType,
-                    onSlow,
-                    mover: moverName,
-                });
+                rerunOptions.frameDuration = nextFrameDuration;
+                rerunOptions.name = itemId;
+                rerunOptions.type = itemType;
+                rerunOptions.onSlow = onSlow;
+                rerunOptions.mover = moverName;
+                runMover3d(rerunOptions);
             }
         });
     }

@@ -2,19 +2,24 @@ import { addToLimitedArray } from "chootils/dist/arrays";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import {
   defaultOptions,
+  defaultPhysics,
   // maximumFrameTime,
   physicsTimestep,
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import {
+  AnyMoverStateNames,
+  MoveMode,
+  PhysicsConfig,
+  PhysicsOptions,
+} from "./types";
 import {
   makeMoverStateMaker,
   makeStateNames,
   normalizeDefinedPhysicsConfig,
   PropTypesByWord,
   NewProps,
-
 } from "./utils";
 
 /*
@@ -28,15 +33,17 @@ export type PositionAndVelocity = {
   velocity: number;
 };
 
-type MainValueType = number
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("1d").stopSpeed;
+
+type MainValueType = number;
 
 // manually retyped because d.ts had some trouble with nested functions?
-export const moverState = (makeMoverStateMaker(() => 0)) as <
+export const moverState = makeMoverStateMaker(() => 0) as <
   T_Name extends string,
   T_PhysicsNames extends string,
   T_InitialState extends {
-    value?: MainValueType;    // T_ValueType
-    valueGoal?: MainValueType;  // T_ValueType
+    value?: MainValueType; // T_ValueType
+    valueGoal?: MainValueType; // T_ValueType
     isMoving?: boolean;
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
@@ -46,17 +53,15 @@ export const moverState = (makeMoverStateMaker(() => 0)) as <
   newName: T_Name,
   initialState?: T_InitialState
 ) => Record<T_Name, MainValueType> &
-Record<`${T_Name}Goal`, MainValueType> &
-Record<`${T_Name}IsMoving`, boolean> &
-Record<`${T_Name}MoveMode`, MoveMode> &
+  Record<`${T_Name}Goal`, MainValueType> &
+  Record<`${T_Name}IsMoving`, boolean> &
+  Record<`${T_Name}MoveMode`, MoveMode> &
   (T_InitialState["moveConfigName"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
   (T_InitialState["moveConfigs"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
-
-
 
 export function moverRefs<T_Name extends string>(
   newName: T_Name,
@@ -66,7 +71,7 @@ export function moverRefs<T_Name extends string>(
     velocity: 0,
     recentSpeeds: [] as number[],
     stateNames: makeStateNames(newName),
-    physicsConfigs: normalizeDefinedPhysicsConfig(config),
+    physicsConfigs: normalizeDefinedPhysicsConfig(config, "1d"),
   };
 
   return {
@@ -106,6 +111,14 @@ export function makeMover1dUtils<
     mover: StateNameProperty<T_ItemType>;
   };
   // ---------------------------
+
+  const rerunOptions: RunMoverOptions<any> = {
+    frameDuration: 16.6667,
+    name: "",
+    type: "",
+    onSlow: undefined,
+    mover: "",
+  };
 
   function runMover<T_ItemType extends ItemType>({
     frameDuration = 16.6667,
@@ -147,6 +160,9 @@ export function makeMover1dUtils<
     prevStepState.position = currentStepState.position;
     prevStepState.velocity = currentStepState.velocity;
 
+    const springStopSpeed =
+      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
+
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
       // currentStepState = runPhysicsStep(
@@ -183,10 +199,11 @@ export function makeMover1dUtils<
 
     const isNearTarget =
       Math.abs(itemState[keys.value] - targetPosition) < 0.01;
+
     let isStillMoving = Math.abs(averageSpeed) > 0.003;
     let shouldStopMoving = !isStillMoving;
     if (moveMode === "spring") {
-      let isStillMoving = Math.abs(averageSpeed) > 0.01;
+      let isStillMoving = Math.abs(averageSpeed) > springStopSpeed;
       shouldStopMoving = !isStillMoving && isNearTarget;
     }
 
@@ -201,12 +218,12 @@ export function makeMover1dUtils<
       (nextFrameDuration) => {
         const newItemState = (getState() as any)[itemType][itemId];
         if (newItemState?.[keys.isMoving]) {
-          runMover({
-            frameDuration: nextFrameDuration,
-            name: itemId,
-            type: itemType,
-            mover: moverName,
-          });
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.name = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.mover = moverName;
+
+          runMover(rerunOptions);
         }
       }
     );

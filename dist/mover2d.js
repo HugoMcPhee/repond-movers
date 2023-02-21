@@ -1,15 +1,15 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
-import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, subtractPointsSafer, updatePoint, } from "chootils/dist/points2d";
+import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolatePoints, pointBasicallyZero, pointIsZero, subtractPointsSafer, updatePoint, } from "chootils/dist/points2d";
 import { addPoints, dividePoint, multiplyPoint, subtractPoints, } from "chootils/dist/points2dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance2d";
-import { defaultOptions, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
+import { defaultOptions, defaultPhysics, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, } from "./utils";
 /*
 New options:
 allow interpolating
 */
-const SPRING_STOP_SPEED = 1;
+const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("2d").stopSpeed;
 export const mover2dState = makeMoverStateMaker(defaultPosition);
 export function mover2dRefs(newName, config) {
     const newRefs = {
@@ -18,7 +18,7 @@ export function mover2dRefs(newName, config) {
         averageSpeed: 0,
         canRunOnSlow: true,
         stateNames: makeStateNames(newName),
-        physicsConfigs: normalizeDefinedPhysicsConfig(config),
+        physicsConfigs: normalizeDefinedPhysicsConfig(config, "2d"),
     };
     return {
         [`${newName}MoverRefs`]: newRefs,
@@ -27,8 +27,15 @@ export function mover2dRefs(newName, config) {
 export function makeMover2dUtils(conceptoFuncs) {
     const { getRefs, getState, setState } = conceptoFuncs;
     // ---------------------------
+    const rerunOptions = {
+        frameDuration: 16.6667,
+        name: "",
+        type: "",
+        onSlow: undefined,
+        mover: "",
+    };
     function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemType, mover: moverName, onSlow, }) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         // repeated for all movers Start
         const itemRefs = getRefs()[itemType][itemId];
         const itemState = getState()[itemType][itemId];
@@ -50,7 +57,9 @@ export function makeMover2dUtils(conceptoFuncs) {
         // let prevStepState = currentStepState;
         let timeRemainingForPhysics = frameDuration;
         // repeated for all movers End
+        // TODO could use a ref for this value, and copy into it
         const originalPositon = copyPoint(itemState[keys.value]);
+        const springStopSpeed = (_d = physicsOptions.stopSpeed) !== null && _d !== void 0 ? _d : DEFAULT_SPRING_STOP_SPEED;
         while (timeRemainingForPhysics >= physicsTimestep) {
             // prevStepState = currentStepState;
             updatePoint(prevStepState.position, currentStepState.position);
@@ -77,12 +86,21 @@ export function makeMover2dUtils(conceptoFuncs) {
         let shouldKeepMoving = true;
         if (isAutoMovementType)
             shouldKeepMoving =
-                itemState[keys.isMoving] && averageSpeed > SPRING_STOP_SPEED;
-        if (!shouldKeepMoving)
+                itemState[keys.isMoving] && averageSpeed > springStopSpeed;
+        // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
+        if (!shouldKeepMoving) {
+            // console.log("shouldKeepMoving", shouldKeepMoving);
             setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+        }
         setState((state) => {
             const currentPosition = state[itemType][itemId][keys.value];
             const positionDifference = subtractPointsSafer(newPosition, originalPositon);
+            if (pointIsZero(positionDifference)) {
+                return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+            }
+            if (pointBasicallyZero(positionDifference)) {
+                return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+            }
             const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
             return {
                 [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
@@ -99,13 +117,12 @@ export function makeMover2dUtils(conceptoFuncs) {
                 // NOTE
                 // the next frame mover always runs at the very start of the next frame
                 // could add a fow option to movers to react to a frame tick on specific frame
-                runMover2d({
-                    frameDuration: nextFrameDuration,
-                    name: itemId,
-                    type: itemType,
-                    onSlow,
-                    mover: moverName,
-                });
+                rerunOptions.frameDuration = nextFrameDuration;
+                rerunOptions.name = itemId;
+                rerunOptions.type = itemType;
+                rerunOptions.onSlow = onSlow;
+                rerunOptions.mover = moverName;
+                runMover2d(rerunOptions);
             }
         });
     }
