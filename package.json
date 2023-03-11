@@ -1,7 +1,7 @@
 {
-  "name": "pietem-movers",
-  "version": "0.6.0",
-  "description": "movers for pietem",
+  "name": "repond-movers",
+  "version": "0.6.1",
+  "description": "movers for repond",
   "___main": "src/index.ts",
   "___types": "src/index.ts",
   "___files": [
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HugoMcPhee/pietem-movers.git"
+    "url": "git+https://github.com/HugoMcPhee/repond-movers.git"
   },
   "keywords": [
     "pietiem",
