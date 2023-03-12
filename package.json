@@ -27,7 +27,7 @@
     "motion"
   ],
   "author": "Hugo McPhee",
-  "license": "",
+  "license": "MIT",
   "devDependencies": {
     "@types/react": "^17.0.28",
     "chootils": "^0.3.8",
