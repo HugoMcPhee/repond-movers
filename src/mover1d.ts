@@ -8,19 +8,8 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import {
-  AnyMoverStateNames,
-  MoveMode,
-  PhysicsConfig,
-  PhysicsOptions,
-} from "./types";
-import {
-  makeMoverStateMaker,
-  makeStateNames,
-  normalizeDefinedPhysicsConfig,
-  PropTypesByWord,
-  NewProps,
-} from "./utils";
+import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, PropTypesByWord, NewProps } from "./utils";
 
 /*
 New options:
@@ -56,17 +45,12 @@ export const moverState = makeMoverStateMaker(() => 0) as <
   Record<`${T_Name}Goal`, MainValueType> &
   Record<`${T_Name}IsMoving`, boolean> &
   Record<`${T_Name}MoveMode`, MoveMode> &
-  (T_InitialState["moveConfigName"] extends undefined
-    ? {}
-    : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
+  (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
   (T_InitialState["moveConfigs"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 
-export function moverRefs<T_Name extends string>(
-  newName: T_Name,
-  config?: PhysicsConfig
-) {
+export function moverRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig) {
   const newRefs = {
     velocity: 0,
     recentSpeeds: [] as number[],
@@ -86,11 +70,7 @@ export function makeMover1dUtils<
     newState: Record<any, any> | ((state: any) => any),
     callback?: (nextFrameDuration: number) => any
   ) => any
->(conceptoFuncs: {
-  getState: T_GetState;
-  getRefs: T_GetRefs;
-  setState: T_SetState;
-}) {
+>(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
   const { getRefs, getState, setState } = conceptoFuncs;
 
   // ---------------------------
@@ -101,14 +81,14 @@ export function makeMover1dUtils<
   type ItemState<T_ItemType extends ItemType> =
     ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
 
-  type StateNameProperty<T_ItemType extends ItemType> =
-    keyof ItemState<T_ItemType>;
+  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
   type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
     name: string;
     type: T_ItemType;
     frameDuration?: number;
-    mover: StateNameProperty<T_ItemType>;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
   };
   // ---------------------------
 
@@ -118,13 +98,15 @@ export function makeMover1dUtils<
     type: "",
     onSlow: undefined,
     mover: "",
+    autoRerun: true,
   };
 
-  function runMover<T_ItemType extends ItemType>({
+  function runMover1d<T_ItemType extends ItemType>({
     frameDuration = 16.6667,
     type: itemType,
     name: itemId,
     mover: moverName,
+    autoRerun,
   }: // onSlow,
   RunMoverOptions<T_ItemType>) {
     // repeated for all movers Start
@@ -134,49 +116,40 @@ export function makeMover1dUtils<
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys: AnyMoverStateNames = moverRefs.stateNames;
 
-    const currentStepState = {
+    const nowStepState = {
       position: itemState[keys.value],
       velocity: moverRefs.velocity,
     };
     const prevStepState = {
-      position: currentStepState.position,
-      velocity: currentStepState.velocity,
+      position: nowStepState.position,
+      velocity: nowStepState.velocity,
     };
 
-    const moveMode: MoveMode =
-      itemState[keys.moveMode] ?? defaultOptions.moveMode;
+    const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-    const physicsConfigs =
-      itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
     const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ??
-      physicsConfigs[defaultOptions.physicsConfigName];
+      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
     const targetPosition = itemState[keys.valueGoal];
     let timeRemainingForPhysics = frameDuration;
     // repeated for all movers End
 
-    prevStepState.position = currentStepState.position;
-    prevStepState.velocity = currentStepState.velocity;
+    prevStepState.position = nowStepState.position;
+    prevStepState.velocity = nowStepState.velocity;
 
-    const springStopSpeed =
-      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
+    const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
       // currentStepState = runPhysicsStep(
-      runPhysicsStep(
-        currentStepState,
-        targetPosition,
-        moveMode,
-        physicsOptions
-      );
+      runPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
       timeRemainingForPhysics -= physicsTimestep;
     }
 
     // TODO maybe set the new position based on the current position like mover 3d
-    let interpolatedPosition = currentStepState.position;
+    let interpolatedPosition = nowStepState.position;
 
     // caused it to stop working on iPad ?
     // const remainingTimestepPercent = timeRemainingForPhysics / physicsTimestep;
@@ -186,19 +159,15 @@ export function makeMover1dUtils<
     //   remainingTimestepPercent
     // );
 
-    const currentSpeed = Math.abs(currentStepState.velocity);
+    const currentSpeed = Math.abs(nowStepState.velocity);
     addToLimitedArray(moverRefs.recentSpeeds, currentSpeed, recentSpeedsAmount);
 
-    moverRefs.velocity = currentStepState.velocity;
+    moverRefs.velocity = nowStepState.velocity;
 
-    const hasEnoughSpeeds =
-      moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
-    const averageSpeed = hasEnoughSpeeds
-      ? getAverageSpeed(moverRefs.recentSpeeds)
-      : Infinity;
+    const hasEnoughSpeeds = moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
+    const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(moverRefs.recentSpeeds) : Infinity;
 
-    const isNearTarget =
-      Math.abs(itemState[keys.value] - targetPosition) < 0.01;
+    const isNearTarget = Math.abs(itemState[keys.value] - targetPosition) < 0.01;
 
     let isStillMoving = Math.abs(averageSpeed) > 0.003;
     let shouldStopMoving = !isStillMoving;
@@ -208,6 +177,8 @@ export function makeMover1dUtils<
     }
 
     if (shouldStopMoving) {
+      // console.log("should stop moving");
+
       setState({
         [itemType]: { [itemId]: { [keys.isMoving]: false } },
       });
@@ -215,17 +186,20 @@ export function makeMover1dUtils<
 
     setState(
       { [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } },
-      (nextFrameDuration) => {
-        const newItemState = (getState() as any)[itemType][itemId];
-        if (newItemState?.[keys.isMoving]) {
-          rerunOptions.frameDuration = nextFrameDuration;
-          rerunOptions.name = itemId;
-          rerunOptions.type = itemType;
-          rerunOptions.mover = moverName;
+      autoRerun
+        ? (nextFrameDuration) => {
+            const newItemState = (getState() as any)[itemType][itemId];
+            if (newItemState?.[keys.isMoving]) {
+              rerunOptions.frameDuration = nextFrameDuration;
+              rerunOptions.name = itemId;
+              rerunOptions.type = itemType;
+              rerunOptions.mover = moverName;
+              rerunOptions.autoRerun = autoRerun;
 
-          runMover(rerunOptions);
-        }
-      }
+              runMover1d(rerunOptions);
+            }
+          }
+        : undefined
     );
   }
 
@@ -253,9 +227,7 @@ export function makeMover1dUtils<
         }
         break;
       case "slide":
-        newVelocity =
-          stepState.velocity *
-          Math.pow(1 - friction, physicsTimestepInSeconds * 10);
+        newVelocity = stepState.velocity * Math.pow(1 - friction, physicsTimestepInSeconds * 10);
         break;
       case "drag":
         break;
@@ -274,6 +246,6 @@ export function makeMover1dUtils<
   return {
     moverState,
     moverRefs,
-    runMover,
+    runMover1d,
   };
 }

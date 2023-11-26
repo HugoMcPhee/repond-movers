@@ -42,12 +42,13 @@ export declare function makeMover3dUtils<T_GetState extends () => any, T_GetRefs
         moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
     }>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, Point3D> & Record<`${T_Name}Goal`, Point3D> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
     mover3dRefs: typeof mover3dRefs;
-    runMover3d: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, name: itemId, type: itemType, onSlow, mover: moverName, }: {
+    runMover3d: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, name: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: {
         onSlow?: () => any;
         name: string;
         type: T_ItemType;
         frameDuration?: number;
-        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]];
+        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]] & string;
+        autoRerun?: boolean;
     }) => void;
 };
 export {};

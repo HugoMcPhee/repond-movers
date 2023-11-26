@@ -19,12 +19,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import {
-  AnyMoverStateNames,
-  MoveMode,
-  OnePhysicsConfig,
-  PhysicsConfig,
-} from "./types";
+import { AnyMoverStateNames, MoveMode, OnePhysicsConfig, PhysicsConfig } from "./types";
 import {
   // makeMoverStateMaker,
   makeStateNames,
@@ -46,10 +41,11 @@ type Untyped_MoverRefs = {
   animNames: string[];
 };
 
-export function moverMultiRefs<
-  T_Name extends string,
-  T_AnimNames extends readonly string[]
->(newName: T_Name, animNames: T_AnimNames, config?: PhysicsConfig) {
+export function moverMultiRefs<T_Name extends string, T_AnimNames extends readonly string[]>(
+  newName: T_Name,
+  animNames: T_AnimNames,
+  config?: PhysicsConfig
+) {
   type AnimName = T_AnimNames[number];
 
   const _animRefs = {} as any;
@@ -80,11 +76,7 @@ export function makeMoverMultiUtils<
     newState: Record<any, any> | ((state: any) => any),
     callback?: (nextFrameDuration: number) => any
   ) => any
->(conceptoFuncs: {
-  getState: T_GetState;
-  getRefs: T_GetRefs;
-  setState: T_SetState;
-}) {
+>(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
   const { getRefs, getState, setState } = conceptoFuncs;
 
   // ---------------------------
@@ -95,14 +87,14 @@ export function makeMoverMultiUtils<
   type ItemState<T_ItemType extends ItemType> =
     ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
 
-  type StateNameProperty<T_ItemType extends ItemType> =
-    keyof ItemState<T_ItemType>;
+  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
   type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
     name: string;
     type: T_ItemType;
     frameDuration?: number;
-    mover: StateNameProperty<T_ItemType>;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
   };
   // ---------------------------
 
@@ -112,6 +104,7 @@ export function makeMoverMultiUtils<
     type: "",
     onSlow: undefined,
     mover: "",
+    autoRerun: true,
   };
 
   function runMoverMulti<T_ItemType extends ItemType>({
@@ -119,6 +112,7 @@ export function makeMoverMultiUtils<
     type: itemType,
     name: itemId,
     mover: moverName,
+    autoRerun,
   }: // onSlow,
   RunMoverOptions<T_ItemType>) {
     // repeated for all movers Start
@@ -134,21 +128,15 @@ export function makeMoverMultiUtils<
     // if any shouldStopMoving === false, then shouldKeepGoing = true
     let shouldKeepGoing = false;
 
-    const nowStepStates = {} as Record<
-      string,
-      { position: number; velocity: number }
-    >;
+    const nowStepStates = {} as Record<string, { position: number; velocity: number }>;
     const newMoverState = {} as Record<string, number>;
 
-    const moveMode: MoveMode =
-      itemState[keys.moveMode] ?? defaultOptions.moveMode;
+    const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-    const physicsConfigs =
-      itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
     const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ??
-      physicsConfigs[defaultOptions.physicsConfigName];
+      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
     forEach(animNames, (animName) => {
       nowStepStates[animName] = {
@@ -176,22 +164,14 @@ export function makeMoverMultiUtils<
       newMoverState[animName] = nowStepState.position;
 
       const currentSpeed = Math.abs(nowStepState.velocity);
-      addToLimitedArray(
-        animRefs[animName].recentSpeeds,
-        currentSpeed,
-        recentSpeedsAmount
-      );
+      addToLimitedArray(animRefs[animName].recentSpeeds, currentSpeed, recentSpeedsAmount);
 
       animRefs[animName].velocity = nowStepState.velocity;
 
-      const hasEnoughSpeeds =
-        animRefs[animName].recentSpeeds.length >= recentSpeedsAmount - 1;
-      const averageSpeed = hasEnoughSpeeds
-        ? getAverageSpeed(animRefs[animName].recentSpeeds)
-        : Infinity;
+      const hasEnoughSpeeds = animRefs[animName].recentSpeeds.length >= recentSpeedsAmount - 1;
+      const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(animRefs[animName].recentSpeeds) : Infinity;
 
-      const isNearTarget =
-        Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
+      const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
       let isStillMoving = Math.abs(averageSpeed) > 0.003;
       let shouldStopMoving = !isStillMoving;
       if (moveMode === "spring") {
@@ -215,17 +195,19 @@ export function makeMoverMultiUtils<
 
     setState(
       { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
-      (nextFrameDuration) => {
-        const newItemState = (getState() as any)[itemType][itemId];
-        if (newItemState?.[keys.isMoving]) {
-          rerunOptions.frameDuration = nextFrameDuration;
-          rerunOptions.name = itemId;
-          rerunOptions.type = itemType;
-          rerunOptions.mover = moverName;
+      autoRerun
+        ? (nextFrameDuration) => {
+            const newItemState = (getState() as any)[itemType][itemId];
+            if (newItemState?.[keys.isMoving]) {
+              rerunOptions.frameDuration = nextFrameDuration;
+              rerunOptions.name = itemId;
+              rerunOptions.type = itemType;
+              rerunOptions.mover = moverName;
 
-          runMoverMulti(rerunOptions);
-        }
-      }
+              runMoverMulti(rerunOptions);
+            }
+          }
+        : undefined
     );
   }
 
@@ -253,9 +235,7 @@ export function makeMoverMultiUtils<
         }
         break;
       case "slide":
-        newVelocity =
-          nowStepState.velocity *
-          Math.pow(1 - friction, physicsTimestepInSeconds * 10);
+        newVelocity = nowStepState.velocity * Math.pow(1 - friction, physicsTimestepInSeconds * 10);
         break;
       case "drag":
         break;

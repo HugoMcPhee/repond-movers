@@ -10,12 +10,7 @@ import {
   subtractPointsSafer,
   updatePoint,
 } from "chootils/dist/points3d";
-import {
-  addPoints,
-  dividePoint,
-  multiplyPoint,
-  subtractPoints,
-} from "chootils/dist/points3dInPlace";
+import { addPoints, dividePoint, multiplyPoint, subtractPoints } from "chootils/dist/points3dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import {
   getSpeedAndAngleFromVector,
@@ -29,17 +24,8 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import {
-  AnyMoverStateNames,
-  MoveMode,
-  PhysicsConfig,
-  PhysicsOptions,
-} from "./types";
-import {
-  makeMoverStateMaker,
-  makeStateNames,
-  normalizeDefinedPhysicsConfig,
-} from "./utils";
+import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 export type PositionAndVelocity = {
   position: Point3D;
@@ -68,17 +54,12 @@ export const mover3dState = makeMoverStateMaker(defaultPosition) as <
   Record<`${T_Name}Goal`, MainValueType> &
   Record<`${T_Name}IsMoving`, boolean> &
   Record<`${T_Name}MoveMode`, MoveMode> &
-  (T_InitialState["moveConfigName"] extends undefined
-    ? {}
-    : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
+  (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
   (T_InitialState["moveConfigs"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 
-export function mover3dRefs<T_Name extends string>(
-  newName: T_Name,
-  config?: PhysicsConfig
-) {
+export function mover3dRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig) {
   const newRefs = {
     velocity: defaultPosition(),
     recentSpeeds: [] as number[],
@@ -100,11 +81,7 @@ export function makeMover3dUtils<
     newState: Record<any, any> | ((state: any) => any),
     callback?: (nextFrameDuration: number) => any
   ) => any
->(conceptoFuncs: {
-  getState: T_GetState;
-  getRefs: T_GetRefs;
-  setState: T_SetState;
-}) {
+>(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
   const { getRefs, getState, setState } = conceptoFuncs;
 
   // ---------------------------
@@ -115,14 +92,14 @@ export function makeMover3dUtils<
   type ItemState<T_ItemType extends ItemType> =
     ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
 
-  type StateNameProperty<T_ItemType extends ItemType> =
-    keyof ItemState<T_ItemType>;
+  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
   type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
     name: string;
     type: T_ItemType;
     frameDuration?: number;
-    mover: StateNameProperty<T_ItemType>;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean;
   };
   // ---------------------------
 
@@ -132,6 +109,7 @@ export function makeMover3dUtils<
     type: "",
     onSlow: undefined,
     mover: "",
+    autoRerun: true,
   };
 
   function runMover3d<T_ItemType extends ItemType>({
@@ -140,6 +118,7 @@ export function makeMover3dUtils<
     type: itemType,
     onSlow,
     mover: moverName,
+    autoRerun,
   }: RunMoverOptions<T_ItemType>) {
     // repeated for all movers Start
     const itemRefs = (getRefs() as any)[itemType][itemId] as any;
@@ -148,22 +127,20 @@ export function makeMover3dUtils<
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys: AnyMoverStateNames = moverRefs.stateNames;
 
-    const currentStepState = {
+    const nowStepState = {
       position: copyPoint(itemState[keys.value]),
       velocity: copyPoint(moverRefs.velocity),
     };
     const prevStepState = {
-      position: copyPoint(currentStepState.position),
-      velocity: copyPoint(currentStepState.velocity),
+      position: copyPoint(nowStepState.position),
+      velocity: copyPoint(nowStepState.velocity),
     };
     const moveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-    const physicsConfigs =
-      itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
     const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ??
-      physicsConfigs[defaultOptions.physicsConfigName];
+      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
     const targetPosition = itemState[keys.valueGoal];
     let timeRemainingForPhysics = frameDuration;
@@ -171,43 +148,34 @@ export function makeMover3dUtils<
 
     const originalPositon = copyPoint(itemState[keys.value]);
 
-    const springStopSpeed =
-      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
+    const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
-      updatePoint(prevStepState.position, currentStepState.position);
-      updatePoint(prevStepState.velocity, currentStepState.velocity);
+      updatePoint(prevStepState.position, nowStepState.position);
+      updatePoint(prevStepState.velocity, nowStepState.velocity);
       // currentStepState = runPhysicsStep({
-      runPhysicsStep(
-        currentStepState,
-        moveMode,
-        physicsOptions,
-        targetPosition
-      );
+      runPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
       timeRemainingForPhysics -= physicsTimestep;
     }
 
     // can just use the current position if interpolating isn't needed
     const newPosition = interpolatePoints(
-      currentStepState.position,
+      nowStepState.position,
       prevStepState.position,
       timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
     );
 
-    moverRefs.velocity = currentStepState.velocity;
+    moverRefs.velocity = nowStepState.velocity;
 
     // Check shouldKeepMoving
     // note could move this to inside the setState to get latest state and use actualNewPosition
     const currentSpeed = getVectorSpeed(moverRefs.velocity);
     addToLimitedArray(moverRefs.recentSpeeds, currentSpeed, recentSpeedsAmount);
 
-    const hasEnoughSpeeds =
-      moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
+    const hasEnoughSpeeds = moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
 
-    const averageSpeed = hasEnoughSpeeds
-      ? getAverageSpeed(moverRefs.recentSpeeds)
-      : Infinity;
+    const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(moverRefs.recentSpeeds) : Infinity;
 
     // FIXME a problem happens when moving from "push" to "spring",
     // there are already recentSpeeds that might have a lot of 0's
@@ -215,25 +183,18 @@ export function makeMover3dUtils<
 
     moverRefs.averageSpeed = averageSpeed;
 
-    const isAutoMovementType =
-      itemState[keys.moveMode] === "spring" ||
-      itemState[keys.moveMode] === "slide";
+    const isAutoMovementType = itemState[keys.moveMode] === "spring" || itemState[keys.moveMode] === "slide";
     // NOTE was it needed to check the latest state here?
 
     // const isAutoMovementType = moveMode === "spring" || moveMode === "slide";
 
     let shouldKeepMoving = true;
     if (isAutoMovementType) {
-      const targetPointDifference = subtractPointsSafer(
-        newPosition,
-        targetPosition
-      );
+      const targetPointDifference = subtractPointsSafer(newPosition, targetPosition);
 
       const isGoingFasterThanStopSpeed = averageSpeed > springStopSpeed;
       const quickDistance =
-        Math.abs(targetPointDifference.x) +
-        Math.abs(targetPointDifference.y) +
-        Math.abs(targetPointDifference.z);
+        Math.abs(targetPointDifference.x) + Math.abs(targetPointDifference.y) + Math.abs(targetPointDifference.z);
       const isQuiteClose = quickDistance < 0.15;
 
       if (isGoingFasterThanStopSpeed) {
@@ -243,22 +204,15 @@ export function makeMover3dUtils<
       }
     }
 
-    if (!shouldKeepMoving)
-      setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+    if (!shouldKeepMoving) setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
 
     setState(
       (state) => {
         const currentPosition = (state as any)[itemType][itemId][keys.value];
 
-        const positionDifference = subtractPointsSafer(
-          newPosition,
-          originalPositon
-        );
+        const positionDifference = subtractPointsSafer(newPosition, originalPositon);
 
-        const actualNewPosition = addPointsImmutable(
-          currentPosition,
-          positionDifference
-        );
+        const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
         // console.log("diff", Math.abs(positionDifference.x));
 
         // if (moveMode === "push" || moveMode === "slide") {
@@ -285,13 +239,14 @@ export function makeMover3dUtils<
             onSlow?.();
           }
         }
-
+        if (!autoRerun) return;
         if (itemState[keys.isMoving]) {
           rerunOptions.frameDuration = nextFrameDuration;
           rerunOptions.name = itemId;
           rerunOptions.type = itemType;
           rerunOptions.onSlow = onSlow;
           rerunOptions.mover = moverName;
+          rerunOptions.autoRerun = autoRerun;
 
           runMover3d(rerunOptions);
         }
@@ -330,31 +285,20 @@ export function makeMover3dUtils<
           updatePoint(pool.velocityCopy, stepState.velocity);
           updatePoint(pool.velocityCopyB, stepState.velocity);
 
-          const positionDifference = subtractPoints(
-            pool.positionCopy,
-            targetPosition
-          );
+          const positionDifference = subtractPoints(pool.positionCopy, targetPosition);
           const springForce = multiplyPoint(positionDifference, -stiffness);
           const dampingForce = multiplyPoint(pool.velocityCopy, damping);
           const force = subtractPoints(springForce, dampingForce);
           const acceleration = dividePoint(force, mass);
-          const accelerationWithTime = multiplyPoint(
-            acceleration,
-            physicsTimestep
-          );
+          const accelerationWithTime = multiplyPoint(acceleration, physicsTimestep);
 
           addPoints(pool.newVelocity, accelerationWithTime);
         }
         break;
       case "slide":
         {
-          const { speed, angle } = getSpeedAndAngleFromVector(
-            stepState.velocity
-          );
-          const newSpeed = Math.max(
-            speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10),
-            0
-          );
+          const { speed, angle } = getSpeedAndAngleFromVector(stepState.velocity);
+          const newSpeed = Math.max(speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10), 0);
 
           pool.newVelocity = getVectorFromSpeedAndAngle(newSpeed, angle);
         }

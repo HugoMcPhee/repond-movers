@@ -45,8 +45,9 @@ export function makeMoverMultiUtils(conceptoFuncs) {
         type: "",
         onSlow: undefined,
         mover: "",
+        autoRerun: true,
     };
-    function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, }) {
+    function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, autoRerun, }) {
         var _a, _b, _c;
         // repeated for all movers Start
         const itemRefs = getRefs()[itemType][itemId];
@@ -85,9 +86,7 @@ export function makeMoverMultiUtils(conceptoFuncs) {
             addToLimitedArray(animRefs[animName].recentSpeeds, currentSpeed, recentSpeedsAmount);
             animRefs[animName].velocity = nowStepState.velocity;
             const hasEnoughSpeeds = animRefs[animName].recentSpeeds.length >= recentSpeedsAmount - 1;
-            const averageSpeed = hasEnoughSpeeds
-                ? getAverageSpeed(animRefs[animName].recentSpeeds)
-                : Infinity;
+            const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(animRefs[animName].recentSpeeds) : Infinity;
             const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
             let isStillMoving = Math.abs(averageSpeed) > 0.003;
             let shouldStopMoving = !isStillMoving;
@@ -106,16 +105,18 @@ export function makeMoverMultiUtils(conceptoFuncs) {
                 [itemType]: { [itemId]: { [keys.isMoving]: false } },
             });
         }
-        setState({ [itemType]: { [itemId]: { [keys.value]: newMoverState } } }, (nextFrameDuration) => {
-            const newItemState = getState()[itemType][itemId];
-            if (newItemState === null || newItemState === void 0 ? void 0 : newItemState[keys.isMoving]) {
-                rerunOptions.frameDuration = nextFrameDuration;
-                rerunOptions.name = itemId;
-                rerunOptions.type = itemType;
-                rerunOptions.mover = moverName;
-                runMoverMulti(rerunOptions);
+        setState({ [itemType]: { [itemId]: { [keys.value]: newMoverState } } }, autoRerun
+            ? (nextFrameDuration) => {
+                const newItemState = getState()[itemType][itemId];
+                if (newItemState === null || newItemState === void 0 ? void 0 : newItemState[keys.isMoving]) {
+                    rerunOptions.frameDuration = nextFrameDuration;
+                    rerunOptions.name = itemId;
+                    rerunOptions.type = itemType;
+                    rerunOptions.mover = moverName;
+                    runMoverMulti(rerunOptions);
+                }
             }
-        });
+            : undefined);
     }
     function runPhysicsStep(nowStepState, targetPosition, moveMode = "spring", physicsOptions) {
         const { stiffness, damping, mass, friction } = physicsOptions;
@@ -133,9 +134,7 @@ export function makeMoverMultiUtils(conceptoFuncs) {
                 }
                 break;
             case "slide":
-                newVelocity =
-                    nowStepState.velocity *
-                        Math.pow(1 - friction, physicsTimestepInSeconds * 10);
+                newVelocity = nowStepState.velocity * Math.pow(1 - friction, physicsTimestepInSeconds * 10);
                 break;
             case "drag":
                 break;

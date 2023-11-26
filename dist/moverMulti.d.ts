@@ -22,12 +22,13 @@ export declare function makeMoverMultiUtils<T_GetState extends () => any, T_GetR
     setState: T_SetState;
 }): {
     moverMultiRefs: typeof moverMultiRefs;
-    runMoverMulti: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, type: itemType, name: itemId, mover: moverName, }: {
+    runMoverMulti: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, type: itemType, name: itemId, mover: moverName, autoRerun, }: {
         onSlow?: () => any;
         name: string;
         type: T_ItemType;
         frameDuration?: number;
-        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]];
+        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]] & string;
+        autoRerun?: boolean;
     }) => void;
 };
 export {};

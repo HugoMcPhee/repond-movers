@@ -10,12 +10,7 @@ import {
   subtractPointsSafer,
   updatePoint,
 } from "chootils/dist/points2d";
-import {
-  addPoints,
-  dividePoint,
-  multiplyPoint,
-  subtractPoints,
-} from "chootils/dist/points2dInPlace";
+import { addPoints, dividePoint, multiplyPoint, subtractPoints } from "chootils/dist/points2dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import {
   getSpeedAndAngleFromVector,
@@ -29,17 +24,8 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import {
-  AnyMoverStateNames,
-  MoveMode,
-  PhysicsConfig,
-  PhysicsOptions,
-} from "./types";
-import {
-  makeMoverStateMaker,
-  makeStateNames,
-  normalizeDefinedPhysicsConfig,
-} from "./utils";
+import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 export type PositionAndVelocity = {
   position: Point2D;
@@ -73,17 +59,12 @@ export const mover2dState = makeMoverStateMaker(defaultPosition) as <
   Record<`${T_Name}Goal`, MainValueType> &
   Record<`${T_Name}IsMoving`, boolean> &
   Record<`${T_Name}MoveMode`, MoveMode> &
-  (T_InitialState["moveConfigName"] extends undefined
-    ? {}
-    : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
+  (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) &
   (T_InitialState["moveConfigs"] extends undefined
     ? {}
     : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 
-export function mover2dRefs<T_Name extends string>(
-  newName: T_Name,
-  config?: PhysicsConfig
-) {
+export function mover2dRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig) {
   const newRefs = {
     velocity: defaultPosition(),
     recentSpeeds: [] as number[],
@@ -105,11 +86,7 @@ export function makeMover2dUtils<
     newState: Record<any, any> | ((state: any) => any),
     callback?: (nextFrameDuration: number) => any
   ) => any
->(conceptoFuncs: {
-  getState: T_GetState;
-  getRefs: T_GetRefs;
-  setState: T_SetState;
-}) {
+>(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
   const { getRefs, getState, setState } = conceptoFuncs;
 
   // ---------------------------
@@ -120,14 +97,14 @@ export function makeMover2dUtils<
   type ItemState<T_ItemType extends ItemType> =
     ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
 
-  type StateNameProperty<T_ItemType extends ItemType> =
-    keyof ItemState<T_ItemType>;
+  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
   type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
     name: string;
     type: T_ItemType;
     frameDuration?: number;
-    mover: StateNameProperty<T_ItemType>;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean;
   };
   // ---------------------------
 
@@ -137,6 +114,7 @@ export function makeMover2dUtils<
     type: "",
     onSlow: undefined,
     mover: "",
+    autoRerun: true,
   };
 
   function runMover2d<T_ItemType extends ItemType>({
@@ -145,6 +123,7 @@ export function makeMover2dUtils<
     type: itemType,
     mover: moverName,
     onSlow,
+    autoRerun,
   }: RunMoverOptions<T_ItemType>) {
     // repeated for all movers Start
     const itemRefs = (getRefs() as any)[itemType][itemId] as any;
@@ -152,24 +131,21 @@ export function makeMover2dUtils<
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys: AnyMoverStateNames = moverRefs.stateNames;
 
-    const currentStepState = {
+    const nowStepState = {
       position: copyPoint(itemState[keys.value]),
       // velocity: copyPoint(moverRefs.velocity),
       velocity: moverRefs.velocity,
     };
     const prevStepState = {
-      position: copyPoint(currentStepState.position),
-      velocity: copyPoint(currentStepState.velocity),
+      position: copyPoint(nowStepState.position),
+      velocity: copyPoint(nowStepState.velocity),
     };
-    const moveMode: MoveMode =
-      itemState[keys.moveMode] ?? defaultOptions.moveMode;
+    const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-    const physicsConfigs =
-      itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
     const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ??
-      physicsConfigs[defaultOptions.physicsConfigName];
+      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
     const targetPosition = itemState[keys.valueGoal];
     // let prevStepState = currentStepState;
@@ -179,54 +155,41 @@ export function makeMover2dUtils<
     // TODO could use a ref for this value, and copy into it
     const originalPositon = copyPoint(itemState[keys.value]);
 
-    const springStopSpeed =
-      physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
+    const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
     while (timeRemainingForPhysics >= physicsTimestep) {
       // prevStepState = currentStepState;
-      updatePoint(prevStepState.position, currentStepState.position);
-      updatePoint(prevStepState.velocity, currentStepState.velocity);
+      updatePoint(prevStepState.position, nowStepState.position);
+      updatePoint(prevStepState.velocity, nowStepState.velocity);
       // currentStepState = runPhysicsStep({
-      runPhysicsStep(
-        currentStepState,
-        moveMode,
-        physicsOptions,
-        targetPosition
-      );
+      runPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
       timeRemainingForPhysics -= physicsTimestep;
     }
 
     // can just use the current position if interpolating isn't needed
     const newPosition = interpolatePoints(
-      currentStepState.position,
+      nowStepState.position,
       prevStepState.position,
       timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
     );
 
-    moverRefs.velocity = currentStepState.velocity;
+    moverRefs.velocity = nowStepState.velocity;
 
     // Check shouldKeepMoving
     // note could move this to inside the setState to get latest state and use actualNewPosition
     const currentSpeed = getVectorSpeed(moverRefs.velocity);
     addToLimitedArray(moverRefs.recentSpeeds, currentSpeed, recentSpeedsAmount);
 
-    const hasEnoughSpeeds =
-      moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
+    const hasEnoughSpeeds = moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
 
-    const averageSpeed = hasEnoughSpeeds
-      ? getAverageSpeed(moverRefs.recentSpeeds)
-      : Infinity;
+    const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(moverRefs.recentSpeeds) : Infinity;
 
     moverRefs.averageSpeed = averageSpeed;
 
-    const isAutoMovementType =
-      itemState[keys.moveMode] === "spring" ||
-      itemState[keys.moveMode] === "slide";
+    const isAutoMovementType = itemState[keys.moveMode] === "spring" || itemState[keys.moveMode] === "slide";
 
     let shouldKeepMoving = true;
-    if (isAutoMovementType)
-      shouldKeepMoving =
-        itemState[keys.isMoving] && averageSpeed > springStopSpeed;
+    if (isAutoMovementType) shouldKeepMoving = itemState[keys.isMoving] && averageSpeed > springStopSpeed;
     // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
 
     if (!shouldKeepMoving) {
@@ -238,10 +201,7 @@ export function makeMover2dUtils<
     setState(
       (state) => {
         const currentPosition = (state as any)[itemType][itemId][keys.value];
-        const positionDifference = subtractPointsSafer(
-          newPosition,
-          originalPositon
-        );
+        const positionDifference = subtractPointsSafer(newPosition, originalPositon);
 
         if (pointIsZero(positionDifference)) {
           return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
@@ -251,10 +211,7 @@ export function makeMover2dUtils<
           return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
         }
 
-        const actualNewPosition = addPointsImmutable(
-          currentPosition,
-          positionDifference
-        );
+        const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
 
         return {
           [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
@@ -263,12 +220,14 @@ export function makeMover2dUtils<
       (nextFrameDuration) => {
         const newItemState = (getState() as any)[itemType][itemId] as any;
 
+        // NOTE possibly move this so the callback isn't needed
         if (isAutoMovementType) {
           if (moverRefs.canRunOnSlow && averageSpeed < 150) {
             moverRefs.canRunOnSlow = false;
             onSlow?.();
           }
         }
+        if (!autoRerun) return;
         if (newItemState[keys.isMoving]) {
           // NOTE
           // the next frame mover always runs at the very start of the next frame
@@ -279,6 +238,7 @@ export function makeMover2dUtils<
           rerunOptions.type = itemType;
           rerunOptions.onSlow = onSlow;
           rerunOptions.mover = moverName;
+          rerunOptions.autoRerun = autoRerun;
 
           runMover2d(rerunOptions);
         }
@@ -317,31 +277,20 @@ export function makeMover2dUtils<
           updatePoint(pool.velocityCopy, stepState.velocity);
           updatePoint(pool.velocityCopyB, stepState.velocity);
 
-          const positionDifference = subtractPoints(
-            pool.positionCopy,
-            targetPosition
-          );
+          const positionDifference = subtractPoints(pool.positionCopy, targetPosition);
           const springForce = multiplyPoint(positionDifference, -stiffness);
           const dampingForce = multiplyPoint(pool.velocityCopy, damping);
           const force = subtractPoints(springForce, dampingForce);
           const acceleration = dividePoint(force, mass);
-          const accelerationWithTime = multiplyPoint(
-            acceleration,
-            physicsTimestep
-          );
+          const accelerationWithTime = multiplyPoint(acceleration, physicsTimestep);
 
           addPoints(pool.newVelocity, accelerationWithTime);
         }
         break;
       case "slide":
         {
-          const { speed, angle } = getSpeedAndAngleFromVector(
-            stepState.velocity
-          );
-          const newSpeed = Math.max(
-            speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10),
-            0
-          );
+          const { speed, angle } = getSpeedAndAngleFromVector(stepState.velocity);
+          const newSpeed = Math.max(speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10), 0);
 
           pool.newVelocity = getVectorFromSpeedAndAngle(newSpeed, angle);
         }
