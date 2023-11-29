@@ -1,62 +1,32 @@
+import { getPreviousState, getRefs, getState, setState, startEffect, stopEffect } from "repond";
 import { makeMover1dUtils } from "./mover1d";
 import { makeMover2dUtils } from "./mover2d";
 import { makeMover3dUtils } from "./mover3d";
 import { makeMoverMultiUtils } from "./moverMulti";
-export { moverState, moverRefs } from "./mover1d";
-export { mover2dState, mover2dRefs } from "./mover2d";
-export { mover3dState, mover3dRefs } from "./mover3d";
+export { moverRefs, moverState } from "./mover1d";
+export { mover2dRefs, mover2dState } from "./mover2d";
+export { mover3dRefs, mover3dState } from "./mover3d";
 export { moverMultiRefs } from "./moverMulti";
 export { makeMoverStateMaker } from "./utils";
 
 type MoverType = "1d" | "2d" | "3d" | "multi";
 
+type GetState = typeof getState;
+type GetRefs = typeof getRefs;
+
 export function makeMoverUtils<
-  T_GetState extends () => any,
-  T_GetPreviousState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any,
-  T_StartItemEffect extends (options: {
-    name: string;
-    run: (options: { newValue: any; previousValue: any }) => any;
-    check: { type: string; prop: string };
-    step: string;
-    atStepEnd: boolean;
-  }) => any,
-  T_StartEffect extends (options: {
-    name: string;
-    run: (options: { newValue: any; previousValue: any }) => any;
-    check: { type: string[]; name: string[]; prop: string[] };
-    step: string;
-    atStepEnd: boolean;
-  }) => any,
-  T_StopEffect extends (name: string) => any,
-  T_PathItemType extends keyof ReturnType<T_GetState> & string,
-  T_PathItemName extends keyof ReturnType<T_GetState>[T_PathItemType] & string,
-  T_PathItemProperty extends keyof ReturnType<T_GetState>[T_PathItemType][T_PathItemName] & string
+  T_PathItemType extends keyof ReturnType<GetState> & string,
+  T_PathItemName extends keyof ReturnType<GetState>[T_PathItemType] & string,
+  T_PathItemProperty extends keyof ReturnType<GetState>[T_PathItemType][T_PathItemName] & string
   // repond store helpers
 >(
-  storeHelpers: {
-    getState: T_GetState;
-    getPreviousState: T_GetPreviousState;
-    getRefs: T_GetRefs;
-    setState: T_SetState;
-    startItemEffect: T_StartItemEffect;
-    startEffect: T_StartEffect;
-    stopEffect: T_StopEffect;
-  },
   timeElapsedStatePath?:
     | [T_PathItemType, T_PathItemName, T_PathItemProperty]
     | readonly [T_PathItemType, T_PathItemName, T_PathItemProperty]
 ) {
-  const { getState, getPreviousState, getRefs, setState, startItemEffect, startEffect, stopEffect } = storeHelpers;
-
   // ---------------------------
   // types
-  type GetState = typeof getState;
-  type GetRefs = typeof getRefs;
+
   type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
   type ItemState<T_ItemType extends ItemType> =
     ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
@@ -64,10 +34,10 @@ export function makeMoverUtils<
 
   type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType> & string;
 
-  const { runMover1d } = makeMover1dUtils<T_GetState, T_GetRefs, T_SetState>(storeHelpers);
-  const { runMover2d } = makeMover2dUtils<T_GetState, T_GetRefs, T_SetState>(storeHelpers);
-  const { runMover3d } = makeMover3dUtils<T_GetState, T_GetRefs, T_SetState>(storeHelpers);
-  const { runMoverMulti } = makeMoverMultiUtils<T_GetState, T_GetRefs, T_SetState>(storeHelpers);
+  const { runMover1d } = makeMover1dUtils();
+  const { runMover2d } = makeMover2dUtils();
+  const { runMover3d } = makeMover3dUtils();
+  const { runMoverMulti } = makeMoverMultiUtils();
 
   const runMoverFunctionsByType = {
     "1d": runMover1d,

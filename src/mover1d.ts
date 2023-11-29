@@ -1,5 +1,6 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
+import { getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -9,7 +10,7 @@ import {
   recentSpeedsAmount,
 } from "./consts";
 import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
-import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig, PropTypesByWord, NewProps } from "./utils";
+import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 /*
 New options:
@@ -63,16 +64,7 @@ export function moverRefs<T_Name extends string>(newName: T_Name, config?: Physi
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-export function makeMover1dUtils<
-  T_GetState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any
->(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
-  const { getRefs, getState, setState } = conceptoFuncs;
-
+export function makeMover1dUtils() {
   // ---------------------------
   // types
   type GetState = typeof getState;

@@ -1,12 +1,12 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
 import {
+  Point3D,
   addPoints as addPointsImmutable,
   copyPoint,
   defaultPosition,
   interpolatePoints,
-  Point3D,
-  pointIsZero,
   pointBasicallyZero,
+  pointIsZero,
   subtractPointsSafer,
   updatePoint,
 } from "chootils/dist/points3d";
@@ -17,6 +17,7 @@ import {
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
 } from "chootils/dist/speedAngleDistance3d";
+import { getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -74,16 +75,7 @@ export function mover3dRefs<T_Name extends string>(newName: T_Name, config?: Phy
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-export function makeMover3dUtils<
-  T_GetState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any
->(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
-  const { getRefs, getState, setState } = conceptoFuncs;
-
+export function makeMover3dUtils() {
   // ---------------------------
   // types
   type GetState = typeof getState;

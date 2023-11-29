@@ -12,6 +12,7 @@ New options:
 allow interpolating
 refNames.averageSpeed
 */
+import { getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   // maximumFrameTime,
@@ -69,16 +70,7 @@ export function moverMultiRefs<T_Name extends string, T_AnimNames extends readon
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-export function makeMoverMultiUtils<
-  T_GetState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any
->(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
-  const { getRefs, getState, setState } = conceptoFuncs;
-
+export function makeMoverMultiUtils() {
   // ---------------------------
   // types
   type GetState = typeof getState;
