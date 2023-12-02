@@ -1,3 +1,9 @@
+import { AllState, AllRefs } from "repond";
+export declare type MoverType = "1d" | "2d" | "3d" | "multi";
+export declare type ItemType = keyof AllState & keyof AllRefs;
+export declare type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
+export declare type ItemRefs<T_ItemType extends ItemType> = AllRefs[T_ItemType][keyof AllRefs[T_ItemType]];
+export declare type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType> & string;
 export declare type MoveMode = "spring" | "slide" | "drag" | "push";
 export declare type PhysicsOptions = {
     mass: number;
@@ -39,5 +45,13 @@ export declare type AnyMoverStateNames = {
     physicsConfigName?: any;
     moveMode?: any;
     physicsConfigs?: any;
+};
+export declare type RunMoverOptions<T_ItemType extends ItemType> = {
+    onSlow?: () => any;
+    name: string;
+    type: T_ItemType;
+    frameDuration?: number;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean;
 };
 export {};

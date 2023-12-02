@@ -17,7 +17,7 @@ import {
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
 } from "chootils/dist/speedAngleDistance3d";
-import { getRefs, getState, setState } from "repond";
+import { AllRefs, AllState, getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -78,10 +78,9 @@ export function mover3dRefs<T_Name extends string>(newName: T_Name, config?: Phy
 // export function makeMover3dUtils() {
 // ---------------------------
 // types
-type GetState = typeof getState;
-type GetRefs = typeof getRefs;
-type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-type ItemState<T_ItemType extends ItemType> = ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
+
+type ItemType = keyof AllState & keyof AllRefs;
+type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
 
 type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
 type RunMoverOptions<T_ItemType extends ItemType> = {

@@ -12,7 +12,7 @@ New options:
 allow interpolating
 refNames.averageSpeed
 */
-import { getRefs, getState, setState } from "repond";
+import { AllRefs, AllState, getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   // maximumFrameTime,
@@ -20,7 +20,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, OnePhysicsConfig, PhysicsConfig } from "./types";
+import { AnyMoverStateNames, ItemType, MoveMode, OnePhysicsConfig, PhysicsConfig, RunMoverOptions } from "./types";
 import {
   // makeMoverStateMaker,
   makeStateNames,
@@ -69,25 +69,6 @@ export function moverMultiRefs<T_Name extends string, T_AnimNames extends readon
     [`${newName}MoverRefs`]: newRefs,
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
-
-// export function makeMoverMultiUtils() {
-// ---------------------------
-// types
-type GetState = typeof getState;
-type GetRefs = typeof getRefs;
-type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-type ItemState<T_ItemType extends ItemType> = ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
-
-type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-type RunMoverOptions<T_ItemType extends ItemType> = {
-  onSlow?: () => any;
-  name: string;
-  type: T_ItemType;
-  frameDuration?: number;
-  mover: StateNameProperty<T_ItemType> & string;
-  autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
-};
-// ---------------------------
 
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,

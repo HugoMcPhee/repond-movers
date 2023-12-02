@@ -1,22 +1,15 @@
-import { AllRefs, AllState, getPreviousState, getState, setState, startEffect, stopEffect } from "repond";
+import { AllRefs, AllState, ItemType, getPreviousState, getState, setState, startEffect, stopEffect } from "repond";
 import { meta } from "./meta";
 import { runMover1d } from "./mover1d";
 import { runMover2d } from "./mover2d";
 import { runMover3d } from "./mover3d";
 import { runMoverMulti } from "./moverMulti";
+import { ItemRefs, ItemState, MoverType, StateNameProperty } from "./types";
 export { moverRefs, moverState } from "./mover1d";
 export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";
 export { moverMultiRefs } from "./moverMulti";
 export { makeMoverStateMaker } from "./utils";
-
-type MoverType = "1d" | "2d" | "3d" | "multi";
-
-type ItemType = keyof AllState & keyof AllRefs;
-type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
-type ItemRefs<T_ItemType extends ItemType> = AllRefs[T_ItemType][keyof AllRefs[T_ItemType]];
-
-type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType> & string;
 
 export function initMovers<
   T_PathItemType extends keyof AllState & string,
@@ -28,14 +21,6 @@ export function initMovers<
     | [T_PathItemType, T_PathItemName, T_PathItemProperty]
     | readonly [T_PathItemType, T_PathItemName, T_PathItemProperty]
 ) {
-  // ---------------------------
-  // types
-
-  // const { runMover1d } = makeMover1dUtils();
-  // const { runMover2d } = makeMover2dUtils();
-  // const { runMover3d } = makeMover3dUtils();
-  // const { runMoverMulti } = makeMoverMultiUtils();
-
   meta.timeElapsedStatePath = timeElapsedStatePath as string[];
 }
 const runMoverFunctionsByType = {

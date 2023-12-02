@@ -9,7 +9,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { AnyMoverStateNames, ItemType, MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 /*
@@ -63,25 +63,6 @@ export function moverRefs<T_Name extends string>(newName: T_Name, config?: Physi
     [`${newName}MoverRefs`]: newRefs,
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
-
-// export function makeMover1dUtils() {
-// ---------------------------
-// types
-type GetState = typeof getState;
-type GetRefs = typeof getRefs;
-type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-type ItemState<T_ItemType extends ItemType> = ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
-
-type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-type RunMoverOptions<T_ItemType extends ItemType> = {
-  onSlow?: () => any;
-  name: string;
-  type: T_ItemType;
-  frameDuration?: number;
-  mover: StateNameProperty<T_ItemType> & string;
-  autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
-};
-// ---------------------------
 
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,

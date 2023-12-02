@@ -17,7 +17,7 @@ import {
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
 } from "chootils/dist/speedAngleDistance2d";
-import { getRefs, getState, setState } from "repond";
+import { AllRefs, AllState, getRefs, getState, ItemType, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -25,7 +25,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 export type PositionAndVelocity = {
@@ -80,25 +80,6 @@ export function mover2dRefs<T_Name extends string>(newName: T_Name, config?: Phy
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-// export function makeMover2dUtils() {
-// ---------------------------
-// types
-type GetState = typeof getState;
-type GetRefs = typeof getRefs;
-type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-type ItemState<T_ItemType extends ItemType> = ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
-
-type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-type RunMoverOptions<T_ItemType extends ItemType> = {
-  onSlow?: () => any;
-  name: string;
-  type: T_ItemType;
-  frameDuration?: number;
-  mover: StateNameProperty<T_ItemType> & string;
-  autoRerun?: boolean;
-};
-// ---------------------------
-
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,
   name: "",
@@ -113,8 +94,8 @@ export function runMover2d<T_ItemType extends ItemType>({
   name: itemId,
   type: itemType,
   mover: moverName,
-  onSlow,
   autoRerun,
+  onSlow,
 }: RunMoverOptions<T_ItemType>) {
   // repeated for all movers Start
   const itemRefs = (getRefs() as any)[itemType][itemId] as any;
