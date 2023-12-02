@@ -46,7 +46,6 @@ const rerunOptions = {
     autoRerun: true,
 };
 export function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, autoRerun, }) {
-    var _a, _b, _c;
     // repeated for all movers Start
     const itemRefs = getRefs()[itemType][itemId];
     const itemState = getState()[itemType][itemId];
@@ -58,9 +57,9 @@ export function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: i
     let shouldKeepGoing = false;
     const nowStepStates = {};
     const newMoverState = {};
-    const moveMode = (_a = itemState[keys.moveMode]) !== null && _a !== void 0 ? _a : defaultOptions.moveMode;
-    const physicsConfigs = (_b = itemState[keys.physicsConfigs]) !== null && _b !== void 0 ? _b : moverRefs.physicsConfigs;
-    const physicsOptions = (_c = physicsConfigs[itemState === null || itemState === void 0 ? void 0 : itemState[keys === null || keys === void 0 ? void 0 : keys.physicsConfigName]]) !== null && _c !== void 0 ? _c : physicsConfigs[defaultOptions.physicsConfigName];
+    const moveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsOptions = physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
     forEach(animNames, (animName) => {
         nowStepStates[animName] = {
             position: itemState[keys.value][animName],
@@ -106,7 +105,7 @@ export function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: i
     setState({ [itemType]: { [itemId]: { [keys.value]: newMoverState } } }, autoRerun
         ? (nextFrameDuration) => {
             const newItemState = getState()[itemType][itemId];
-            if (newItemState === null || newItemState === void 0 ? void 0 : newItemState[keys.isMoving]) {
+            if (newItemState?.[keys.isMoving]) {
                 rerunOptions.frameDuration = nextFrameDuration;
                 rerunOptions.name = itemId;
                 rerunOptions.type = itemType;

@@ -37,10 +37,9 @@ export function addMoverRules(store, moverName, moverType = "1d") {
         startEffect({
             name: ruleName,
             run: () => {
-                var _a, _b;
                 const newTimeElapsed = getState()[timeStoreKey][timeNameKey][timePropKey];
                 const prevTimeElapsed = getPreviousState()[timeStoreKey][timeNameKey][timePropKey];
-                if (!((_b = (_a = getState()[store]) === null || _a === void 0 ? void 0 : _a[itemName]) === null || _b === void 0 ? void 0 : _b[isMovingKey])) {
+                if (!getState()[store]?.[itemName]?.[isMovingKey]) {
                     stopEffect(ruleName);
                 }
                 else {
@@ -99,7 +98,7 @@ export function addMoverRules(store, moverName, moverType = "1d") {
 export function runMover(moverType, { frameDuration, store, name: itemId, mover: moverName, }) {
     const runMoverFunction = runMoverFunctionsByType[moverType];
     return runMoverFunction({
-        frameDuration: frameDuration !== null && frameDuration !== void 0 ? frameDuration : 16.6667,
+        frameDuration: frameDuration ?? 16.6667,
         type: store,
         name: itemId,
         mover: moverName,

@@ -34,7 +34,6 @@ const rerunOptions = {
     autoRerun: true,
 };
 export function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }) {
-    var _a, _b, _c, _d;
     // repeated for all movers Start
     const itemRefs = getRefs()[itemType][itemId];
     const itemState = getState()[itemType][itemId];
@@ -49,16 +48,16 @@ export function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemTy
         position: copyPoint(nowStepState.position),
         velocity: copyPoint(nowStepState.velocity),
     };
-    const moveMode = (_a = itemState[keys.moveMode]) !== null && _a !== void 0 ? _a : defaultOptions.moveMode;
-    const physicsConfigs = (_b = itemState[keys.physicsConfigs]) !== null && _b !== void 0 ? _b : moverRefs.physicsConfigs;
-    const physicsOptions = (_c = physicsConfigs[itemState === null || itemState === void 0 ? void 0 : itemState[keys === null || keys === void 0 ? void 0 : keys.physicsConfigName]]) !== null && _c !== void 0 ? _c : physicsConfigs[defaultOptions.physicsConfigName];
+    const moveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
+    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    const physicsOptions = physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
     const targetPosition = itemState[keys.valueGoal];
     // let prevStepState = currentStepState;
     let timeRemainingForPhysics = frameDuration;
     // repeated for all movers End
     // TODO could use a ref for this value, and copy into it
     const originalPositon = copyPoint(itemState[keys.value]);
-    const springStopSpeed = (_d = physicsOptions.stopSpeed) !== null && _d !== void 0 ? _d : DEFAULT_SPRING_STOP_SPEED;
+    const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
     while (timeRemainingForPhysics >= physicsTimestep) {
         // prevStepState = currentStepState;
         updatePoint(prevStepState.position, nowStepState.position);
@@ -106,7 +105,7 @@ export function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemTy
         if (isAutoMovementType) {
             if (moverRefs.canRunOnSlow && averageSpeed < 150) {
                 moverRefs.canRunOnSlow = false;
-                onSlow === null || onSlow === void 0 ? void 0 : onSlow();
+                onSlow?.();
             }
         }
         if (!autoRerun)
