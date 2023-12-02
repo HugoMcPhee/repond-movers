@@ -27,12 +27,13 @@
     "motion"
   ],
   "author": "Hugo McPhee",
-  "license": "",
+  "license": "MIT",
   "devDependencies": {
     "@types/react": "^17.0.28",
-    "chootils": "^0.3.8",
+    "chootils": "^0.3.9",
     "react": "^17.0.2",
-    "typescript": "^4.4.3"
+    "typescript": "^4.4.3",
+    "repond": "^0.10.0"
   },
   "prettier": {
     "printWidth": 120

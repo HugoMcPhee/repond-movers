@@ -17,6 +17,7 @@ import {
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
 } from "chootils/dist/speedAngleDistance2d";
+import { AllRefs, AllState, getRefs, getState, ItemType, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -24,7 +25,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { AnyMoverStateNames, MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 
 export type PositionAndVelocity = {
@@ -79,240 +80,211 @@ export function mover2dRefs<T_Name extends string>(newName: T_Name, config?: Phy
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-export function makeMover2dUtils<
-  T_GetState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any
->(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
-  const { getRefs, getState, setState } = conceptoFuncs;
+const rerunOptions: RunMoverOptions<any> = {
+  frameDuration: 16.6667,
+  name: "",
+  type: "",
+  onSlow: undefined,
+  mover: "",
+  autoRerun: true,
+};
 
-  // ---------------------------
-  // types
-  type GetState = typeof getState;
-  type GetRefs = typeof getRefs;
-  type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-  type ItemState<T_ItemType extends ItemType> =
-    ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
+export function runMover2d<T_ItemType extends ItemType>({
+  frameDuration = 16.6667,
+  name: itemId,
+  type: itemType,
+  mover: moverName,
+  autoRerun,
+  onSlow,
+}: RunMoverOptions<T_ItemType>) {
+  // repeated for all movers Start
+  const itemRefs = (getRefs() as any)[itemType][itemId] as any;
+  const itemState = (getState() as any)[itemType][itemId] as any;
+  const moverRefs = itemRefs[`${moverName}MoverRefs`];
+  const keys: AnyMoverStateNames = moverRefs.stateNames;
 
-  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-  type RunMoverOptions<T_ItemType extends ItemType> = {
-    onSlow?: () => any;
-    name: string;
-    type: T_ItemType;
-    frameDuration?: number;
-    mover: StateNameProperty<T_ItemType> & string;
-    autoRerun?: boolean;
+  const nowStepState = {
+    position: copyPoint(itemState[keys.value]),
+    // velocity: copyPoint(moverRefs.velocity),
+    velocity: moverRefs.velocity,
   };
-  // ---------------------------
-
-  const rerunOptions: RunMoverOptions<any> = {
-    frameDuration: 16.6667,
-    name: "",
-    type: "",
-    onSlow: undefined,
-    mover: "",
-    autoRerun: true,
+  const prevStepState = {
+    position: copyPoint(nowStepState.position),
+    velocity: copyPoint(nowStepState.velocity),
   };
+  const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-  function runMover2d<T_ItemType extends ItemType>({
-    frameDuration = 16.6667,
-    name: itemId,
-    type: itemType,
-    mover: moverName,
-    onSlow,
-    autoRerun,
-  }: RunMoverOptions<T_ItemType>) {
-    // repeated for all movers Start
-    const itemRefs = (getRefs() as any)[itemType][itemId] as any;
-    const itemState = (getState() as any)[itemType][itemId] as any;
-    const moverRefs = itemRefs[`${moverName}MoverRefs`];
-    const keys: AnyMoverStateNames = moverRefs.stateNames;
+  const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
-    const nowStepState = {
-      position: copyPoint(itemState[keys.value]),
-      // velocity: copyPoint(moverRefs.velocity),
-      velocity: moverRefs.velocity,
-    };
-    const prevStepState = {
-      position: copyPoint(nowStepState.position),
-      velocity: copyPoint(nowStepState.velocity),
-    };
-    const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
+  const physicsOptions =
+    physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
-    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+  const targetPosition = itemState[keys.valueGoal];
+  // let prevStepState = currentStepState;
+  let timeRemainingForPhysics = frameDuration;
+  // repeated for all movers End
 
-    const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
+  // TODO could use a ref for this value, and copy into it
+  const originalPositon = copyPoint(itemState[keys.value]);
 
-    const targetPosition = itemState[keys.valueGoal];
-    // let prevStepState = currentStepState;
-    let timeRemainingForPhysics = frameDuration;
-    // repeated for all movers End
+  const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
-    // TODO could use a ref for this value, and copy into it
-    const originalPositon = copyPoint(itemState[keys.value]);
+  while (timeRemainingForPhysics >= physicsTimestep) {
+    // prevStepState = currentStepState;
+    updatePoint(prevStepState.position, nowStepState.position);
+    updatePoint(prevStepState.velocity, nowStepState.velocity);
+    // currentStepState = runPhysicsStep({
+    run2dPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
+    timeRemainingForPhysics -= physicsTimestep;
+  }
 
-    const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
+  // can just use the current position if interpolating isn't needed
+  const newPosition = interpolatePoints(
+    nowStepState.position,
+    prevStepState.position,
+    timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
+  );
 
-    while (timeRemainingForPhysics >= physicsTimestep) {
-      // prevStepState = currentStepState;
-      updatePoint(prevStepState.position, nowStepState.position);
-      updatePoint(prevStepState.velocity, nowStepState.velocity);
-      // currentStepState = runPhysicsStep({
-      runPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
-      timeRemainingForPhysics -= physicsTimestep;
-    }
+  moverRefs.velocity = nowStepState.velocity;
 
-    // can just use the current position if interpolating isn't needed
-    const newPosition = interpolatePoints(
-      nowStepState.position,
-      prevStepState.position,
-      timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
-    );
+  // Check shouldKeepMoving
+  // note could move this to inside the setState to get latest state and use actualNewPosition
+  const currentSpeed = getVectorSpeed(moverRefs.velocity);
+  addToLimitedArray(moverRefs.recentSpeeds, currentSpeed, recentSpeedsAmount);
 
-    moverRefs.velocity = nowStepState.velocity;
+  const hasEnoughSpeeds = moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
 
-    // Check shouldKeepMoving
-    // note could move this to inside the setState to get latest state and use actualNewPosition
-    const currentSpeed = getVectorSpeed(moverRefs.velocity);
-    addToLimitedArray(moverRefs.recentSpeeds, currentSpeed, recentSpeedsAmount);
+  const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(moverRefs.recentSpeeds) : Infinity;
 
-    const hasEnoughSpeeds = moverRefs.recentSpeeds.length >= recentSpeedsAmount - 1;
+  moverRefs.averageSpeed = averageSpeed;
 
-    const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(moverRefs.recentSpeeds) : Infinity;
+  const isAutoMovementType = itemState[keys.moveMode] === "spring" || itemState[keys.moveMode] === "slide";
 
-    moverRefs.averageSpeed = averageSpeed;
+  let shouldKeepMoving = true;
+  if (isAutoMovementType) shouldKeepMoving = itemState[keys.isMoving] && averageSpeed > springStopSpeed;
+  // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
 
-    const isAutoMovementType = itemState[keys.moveMode] === "spring" || itemState[keys.moveMode] === "slide";
+  if (!shouldKeepMoving) {
+    // console.log("shouldKeepMoving", shouldKeepMoving);
 
-    let shouldKeepMoving = true;
-    if (isAutoMovementType) shouldKeepMoving = itemState[keys.isMoving] && averageSpeed > springStopSpeed;
-    // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
+    setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+  }
 
-    if (!shouldKeepMoving) {
-      // console.log("shouldKeepMoving", shouldKeepMoving);
+  setState(
+    (state) => {
+      const currentPosition = (state as any)[itemType][itemId][keys.value];
+      const positionDifference = subtractPointsSafer(newPosition, originalPositon);
 
-      setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
-    }
+      if (pointIsZero(positionDifference)) {
+        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+      }
 
-    setState(
-      (state) => {
-        const currentPosition = (state as any)[itemType][itemId][keys.value];
-        const positionDifference = subtractPointsSafer(newPosition, originalPositon);
+      if (pointBasicallyZero(positionDifference)) {
+        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+      }
 
-        if (pointIsZero(positionDifference)) {
-          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-        }
+      const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
 
-        if (pointBasicallyZero(positionDifference)) {
-          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-        }
+      return {
+        [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
+      };
+    },
+    (nextFrameDuration) => {
+      const newItemState = (getState() as any)[itemType][itemId] as any;
 
-        const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
-
-        return {
-          [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
-        };
-      },
-      (nextFrameDuration) => {
-        const newItemState = (getState() as any)[itemType][itemId] as any;
-
-        // NOTE possibly move this so the callback isn't needed
-        if (isAutoMovementType) {
-          if (moverRefs.canRunOnSlow && averageSpeed < 150) {
-            moverRefs.canRunOnSlow = false;
-            onSlow?.();
-          }
-        }
-        if (!autoRerun) return;
-        if (newItemState[keys.isMoving]) {
-          // NOTE
-          // the next frame mover always runs at the very start of the next frame
-          // could add a fow option to movers to react to a frame tick on specific frame
-
-          rerunOptions.frameDuration = nextFrameDuration;
-          rerunOptions.name = itemId;
-          rerunOptions.type = itemType;
-          rerunOptions.onSlow = onSlow;
-          rerunOptions.mover = moverName;
-          rerunOptions.autoRerun = autoRerun;
-
-          runMover2d(rerunOptions);
+      // NOTE possibly move this so the callback isn't needed
+      if (isAutoMovementType) {
+        if (moverRefs.canRunOnSlow && averageSpeed < 150) {
+          moverRefs.canRunOnSlow = false;
+          onSlow?.();
         }
       }
-    );
-  }
+      if (!autoRerun) return;
+      if (newItemState[keys.isMoving]) {
+        // NOTE
+        // the next frame mover always runs at the very start of the next frame
+        // could add a fow option to movers to react to a frame tick on specific frame
 
-  // runPhysicsStepObjectPool
-  const pool = {
-    // new both start out as the original value , and get updated in place
-    newVelocity: defaultPosition(),
-    newPosition: defaultPosition(),
-    //
-    positionCopy: defaultPosition(),
-    velocityCopy: defaultPosition(),
-    velocityCopyB: defaultPosition(),
-    amountMoved: defaultPosition(),
-  };
+        rerunOptions.frameDuration = nextFrameDuration;
+        rerunOptions.name = itemId;
+        rerunOptions.type = itemType;
+        rerunOptions.onSlow = onSlow;
+        rerunOptions.mover = moverName;
+        rerunOptions.autoRerun = autoRerun;
 
-  function runPhysicsStep(
-    stepState: PositionAndVelocity,
-    moveMode: MoveMode,
-    physicsOptions: PhysicsOptions,
-    targetPosition: Point2D
-  ) {
-    const { mass, stiffness, damping, friction } = physicsOptions;
-
-    updatePoint(pool.newVelocity, stepState.velocity);
-    updatePoint(pool.newPosition, stepState.position);
-
-    switch (moveMode) {
-      case "spring":
-        {
-          // so we dont edit the original object directly
-          updatePoint(pool.positionCopy, stepState.position);
-          updatePoint(pool.velocityCopy, stepState.velocity);
-          updatePoint(pool.velocityCopyB, stepState.velocity);
-
-          const positionDifference = subtractPoints(pool.positionCopy, targetPosition);
-          const springForce = multiplyPoint(positionDifference, -stiffness);
-          const dampingForce = multiplyPoint(pool.velocityCopy, damping);
-          const force = subtractPoints(springForce, dampingForce);
-          const acceleration = dividePoint(force, mass);
-          const accelerationWithTime = multiplyPoint(acceleration, physicsTimestep);
-
-          addPoints(pool.newVelocity, accelerationWithTime);
-        }
-        break;
-      case "slide":
-        {
-          const { speed, angle } = getSpeedAndAngleFromVector(stepState.velocity);
-          const newSpeed = Math.max(speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10), 0);
-
-          pool.newVelocity = getVectorFromSpeedAndAngle(newSpeed, angle);
-        }
-        break;
-      case "drag":
-        break;
-      case "push":
-        break;
-      default:
+        runMover2d(rerunOptions);
+      }
     }
+  );
+}
 
-    updatePoint(pool.amountMoved, pool.newVelocity);
-    multiplyPoint(pool.amountMoved, physicsTimestepInSeconds);
-    addPoints(pool.newPosition, pool.amountMoved);
+// runPhysicsStepObjectPool
+const pool = {
+  // new both start out as the original value , and get updated in place
+  newVelocity: defaultPosition(),
+  newPosition: defaultPosition(),
+  //
+  positionCopy: defaultPosition(),
+  velocityCopy: defaultPosition(),
+  velocityCopyB: defaultPosition(),
+  amountMoved: defaultPosition(),
+};
 
-    updatePoint(stepState.position, pool.newPosition);
-    updatePoint(stepState.velocity, pool.newVelocity);
+function run2dPhysicsStep(
+  stepState: PositionAndVelocity,
+  moveMode: MoveMode,
+  physicsOptions: PhysicsOptions,
+  targetPosition: Point2D
+) {
+  const { mass, stiffness, damping, friction } = physicsOptions;
+
+  updatePoint(pool.newVelocity, stepState.velocity);
+  updatePoint(pool.newPosition, stepState.position);
+
+  switch (moveMode) {
+    case "spring":
+      {
+        // so we dont edit the original object directly
+        updatePoint(pool.positionCopy, stepState.position);
+        updatePoint(pool.velocityCopy, stepState.velocity);
+        updatePoint(pool.velocityCopyB, stepState.velocity);
+
+        const positionDifference = subtractPoints(pool.positionCopy, targetPosition);
+        const springForce = multiplyPoint(positionDifference, -stiffness);
+        const dampingForce = multiplyPoint(pool.velocityCopy, damping);
+        const force = subtractPoints(springForce, dampingForce);
+        const acceleration = dividePoint(force, mass);
+        const accelerationWithTime = multiplyPoint(acceleration, physicsTimestep);
+
+        addPoints(pool.newVelocity, accelerationWithTime);
+      }
+      break;
+    case "slide":
+      {
+        const { speed, angle } = getSpeedAndAngleFromVector(stepState.velocity);
+        const newSpeed = Math.max(speed * Math.pow(1 - friction, physicsTimestepInSeconds * 10), 0);
+
+        pool.newVelocity = getVectorFromSpeedAndAngle(newSpeed, angle);
+      }
+      break;
+    case "drag":
+      break;
+    case "push":
+      break;
+    default:
   }
 
-  return {
-    mover2dState,
-    mover2dRefs,
-    runMover2d,
-  };
+  updatePoint(pool.amountMoved, pool.newVelocity);
+  multiplyPoint(pool.amountMoved, physicsTimestepInSeconds);
+  addPoints(pool.newPosition, pool.amountMoved);
+
+  updatePoint(stepState.position, pool.newPosition);
+  updatePoint(stepState.velocity, pool.newVelocity);
 }
+
+// export {
+// mover2dState,
+// mover2dRefs,
+// runMover2d,
+// };
+// }

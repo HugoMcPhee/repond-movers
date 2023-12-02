@@ -1,4 +1,4 @@
-import { MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { ItemType, MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
 export declare type PositionAndVelocity = {
     position: number;
     velocity: number;
@@ -25,27 +25,5 @@ export declare function moverRefs<T_Name extends string>(newName: T_Name, config
     };
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
-export declare function makeMover1dUtils<T_GetState extends () => any, T_GetRefs extends () => any, T_SetState extends (newState: Record<any, any> | ((state: any) => any), callback?: (nextFrameDuration: number) => any) => any>(conceptoFuncs: {
-    getState: T_GetState;
-    getRefs: T_GetRefs;
-    setState: T_SetState;
-}): {
-    moverState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
-        value?: number;
-        valueGoal?: number;
-        isMoving?: boolean;
-        moveConfigName?: T_PhysicsNames;
-        moveMode?: MoveMode;
-        moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-    }>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, number> & Record<`${T_Name}Goal`, number> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
-    moverRefs: typeof moverRefs;
-    runMover1d: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, type: itemType, name: itemId, mover: moverName, autoRerun, }: {
-        onSlow?: () => any;
-        name: string;
-        type: T_ItemType;
-        frameDuration?: number;
-        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]] & string;
-        autoRerun?: boolean;
-    }) => void;
-};
+export declare function runMover1d<T_ItemType extends ItemType>({ frameDuration, type: itemType, name: itemId, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
 export {};

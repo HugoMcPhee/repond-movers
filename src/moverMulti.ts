@@ -12,6 +12,7 @@ New options:
 allow interpolating
 refNames.averageSpeed
 */
+import { AllRefs, AllState, getRefs, getState, setState } from "repond";
 import {
   defaultOptions,
   // maximumFrameTime,
@@ -19,7 +20,7 @@ import {
   physicsTimestepInSeconds,
   recentSpeedsAmount,
 } from "./consts";
-import { AnyMoverStateNames, MoveMode, OnePhysicsConfig, PhysicsConfig } from "./types";
+import { AnyMoverStateNames, ItemType, MoveMode, OnePhysicsConfig, PhysicsConfig, RunMoverOptions } from "./types";
 import {
   // makeMoverStateMaker,
   makeStateNames,
@@ -69,192 +70,163 @@ export function moverMultiRefs<T_Name extends string, T_AnimNames extends readon
   } as Record<`${T_Name}MoverRefs`, typeof newRefs>;
 }
 
-export function makeMoverMultiUtils<
-  T_GetState extends () => any,
-  T_GetRefs extends () => any,
-  T_SetState extends (
-    newState: Record<any, any> | ((state: any) => any),
-    callback?: (nextFrameDuration: number) => any
-  ) => any
->(conceptoFuncs: { getState: T_GetState; getRefs: T_GetRefs; setState: T_SetState }) {
-  const { getRefs, getState, setState } = conceptoFuncs;
+const rerunOptions: RunMoverOptions<any> = {
+  frameDuration: 16.6667,
+  name: "",
+  type: "",
+  onSlow: undefined,
+  mover: "",
+  autoRerun: true,
+};
 
-  // ---------------------------
-  // types
-  type GetState = typeof getState;
-  type GetRefs = typeof getRefs;
-  type ItemType = keyof ReturnType<GetState> & keyof ReturnType<GetRefs>;
-  type ItemState<T_ItemType extends ItemType> =
-    ReturnType<GetState>[T_ItemType][keyof ReturnType<GetState>[T_ItemType]];
+export function runMoverMulti<T_ItemType extends ItemType>({
+  frameDuration = 16.6667,
+  type: itemType,
+  name: itemId,
+  mover: moverName,
+  autoRerun,
+}: // onSlow,
+RunMoverOptions<T_ItemType>) {
+  // repeated for all movers Start
+  const itemRefs = (getRefs() as any)[itemType][itemId] as any;
+  const itemState = (getState() as any)[itemType][itemId] as any;
 
-  type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-  type RunMoverOptions<T_ItemType extends ItemType> = {
-    onSlow?: () => any;
-    name: string;
-    type: T_ItemType;
-    frameDuration?: number;
-    mover: StateNameProperty<T_ItemType> & string;
-    autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
-  };
-  // ---------------------------
+  const moverRefs = itemRefs[`${moverName}MoverRefs`] as Untyped_MoverRefs;
+  const keys: AnyMoverStateNames = moverRefs.stateNames;
 
-  const rerunOptions: RunMoverOptions<any> = {
-    frameDuration: 16.6667,
-    name: "",
-    type: "",
-    onSlow: undefined,
-    mover: "",
-    autoRerun: true,
-  };
+  const animNames = moverRefs.animNames;
+  const animRefs = moverRefs.animRefs;
 
-  function runMoverMulti<T_ItemType extends ItemType>({
-    frameDuration = 16.6667,
-    type: itemType,
-    name: itemId,
-    mover: moverName,
-    autoRerun,
-  }: // onSlow,
-  RunMoverOptions<T_ItemType>) {
-    // repeated for all movers Start
-    const itemRefs = (getRefs() as any)[itemType][itemId] as any;
-    const itemState = (getState() as any)[itemType][itemId] as any;
+  // if any shouldStopMoving === false, then shouldKeepGoing = true
+  let shouldKeepGoing = false;
 
-    const moverRefs = itemRefs[`${moverName}MoverRefs`] as Untyped_MoverRefs;
-    const keys: AnyMoverStateNames = moverRefs.stateNames;
+  const nowStepStates = {} as Record<string, { position: number; velocity: number }>;
+  const newMoverState = {} as Record<string, number>;
 
-    const animNames = moverRefs.animNames;
-    const animRefs = moverRefs.animRefs;
+  const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
 
-    // if any shouldStopMoving === false, then shouldKeepGoing = true
-    let shouldKeepGoing = false;
+  const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
 
-    const nowStepStates = {} as Record<string, { position: number; velocity: number }>;
-    const newMoverState = {} as Record<string, number>;
+  const physicsOptions =
+    physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
 
-    const moveMode: MoveMode = itemState[keys.moveMode] ?? defaultOptions.moveMode;
+  forEach(animNames, (animName) => {
+    nowStepStates[animName] = {
+      position: itemState[keys.value][animName],
+      velocity: animRefs[animName].velocity,
+    };
 
-    const physicsConfigs = itemState[keys.physicsConfigs] ?? moverRefs.physicsConfigs;
+    let nowStepState = nowStepStates[animName];
 
-    const physicsOptions =
-      physicsConfigs[itemState?.[keys?.physicsConfigName]] ?? physicsConfigs[defaultOptions.physicsConfigName];
+    const targetPosition = itemState[keys.valueGoal][animName];
+    // let prevStepState = nowStepState;
+    let timeRemainingForPhysics = frameDuration;
+    // repeated for all movers End
 
-    forEach(animNames, (animName) => {
-      nowStepStates[animName] = {
-        position: itemState[keys.value][animName],
-        velocity: animRefs[animName].velocity,
-      };
+    while (timeRemainingForPhysics >= physicsTimestep) {
+      // prevStepState = nowStepState;
+      // nowStepState = runPhysicsStep(
+      runMultiPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
+      timeRemainingForPhysics -= physicsTimestep;
+    }
 
-      let nowStepState = nowStepStates[animName];
+    // TODO maybe set the new position based on the current position like mover 3d
+    // let interpolatedPosition = nowStepState.position;
 
-      const targetPosition = itemState[keys.valueGoal][animName];
-      // let prevStepState = nowStepState;
-      let timeRemainingForPhysics = frameDuration;
-      // repeated for all movers End
+    newMoverState[animName] = nowStepState.position;
 
-      while (timeRemainingForPhysics >= physicsTimestep) {
-        // prevStepState = nowStepState;
-        // nowStepState = runPhysicsStep(
-        runPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
-        timeRemainingForPhysics -= physicsTimestep;
-      }
+    const currentSpeed = Math.abs(nowStepState.velocity);
+    addToLimitedArray(animRefs[animName].recentSpeeds, currentSpeed, recentSpeedsAmount);
 
-      // TODO maybe set the new position based on the current position like mover 3d
-      // let interpolatedPosition = nowStepState.position;
+    animRefs[animName].velocity = nowStepState.velocity;
 
-      newMoverState[animName] = nowStepState.position;
+    const hasEnoughSpeeds = animRefs[animName].recentSpeeds.length >= recentSpeedsAmount - 1;
+    const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(animRefs[animName].recentSpeeds) : Infinity;
 
-      const currentSpeed = Math.abs(nowStepState.velocity);
-      addToLimitedArray(animRefs[animName].recentSpeeds, currentSpeed, recentSpeedsAmount);
+    const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
+    let isStillMoving = Math.abs(averageSpeed) > 0.003;
+    let shouldStopMoving = !isStillMoving;
+    if (moveMode === "spring") {
+      let isStillMoving = Math.abs(averageSpeed) > 0.01;
+      shouldStopMoving = !isStillMoving && isNearTarget;
+    }
 
-      animRefs[animName].velocity = nowStepState.velocity;
+    if (!shouldStopMoving) {
+      // if one anim is still moving, keep running the multi mover
+      shouldKeepGoing = true;
+    }
+  });
 
-      const hasEnoughSpeeds = animRefs[animName].recentSpeeds.length >= recentSpeedsAmount - 1;
-      const averageSpeed = hasEnoughSpeeds ? getAverageSpeed(animRefs[animName].recentSpeeds) : Infinity;
+  // if shouldStopMoving for each anim is true
 
-      const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
-      let isStillMoving = Math.abs(averageSpeed) > 0.003;
-      let shouldStopMoving = !isStillMoving;
-      if (moveMode === "spring") {
-        let isStillMoving = Math.abs(averageSpeed) > 0.01;
-        shouldStopMoving = !isStillMoving && isNearTarget;
-      }
-
-      if (!shouldStopMoving) {
-        // if one anim is still moving, keep running the multi mover
-        shouldKeepGoing = true;
-      }
+  if (!shouldKeepGoing) {
+    setState({
+      [itemType]: { [itemId]: { [keys.isMoving]: false } },
     });
+  }
 
-    // if shouldStopMoving for each anim is true
+  setState(
+    { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
+    autoRerun
+      ? (nextFrameDuration) => {
+          const newItemState = (getState() as any)[itemType][itemId];
+          if (newItemState?.[keys.isMoving]) {
+            rerunOptions.frameDuration = nextFrameDuration;
+            rerunOptions.name = itemId;
+            rerunOptions.type = itemType;
+            rerunOptions.mover = moverName;
 
-    if (!shouldKeepGoing) {
-      setState({
-        [itemType]: { [itemId]: { [keys.isMoving]: false } },
-      });
-    }
-
-    setState(
-      { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
-      autoRerun
-        ? (nextFrameDuration) => {
-            const newItemState = (getState() as any)[itemType][itemId];
-            if (newItemState?.[keys.isMoving]) {
-              rerunOptions.frameDuration = nextFrameDuration;
-              rerunOptions.name = itemId;
-              rerunOptions.type = itemType;
-              rerunOptions.mover = moverName;
-
-              runMoverMulti(rerunOptions);
-            }
+            runMoverMulti(rerunOptions);
           }
-        : undefined
-    );
-  }
-
-  function runPhysicsStep(
-    nowStepState: { position: number; velocity: number },
-    targetPosition: number,
-    moveMode: MoveMode = "spring",
-    physicsOptions: any
-  ) {
-    const { stiffness, damping, mass, friction } = physicsOptions;
-
-    let newVelocity: number = nowStepState.velocity;
-
-    switch (moveMode) {
-      case "spring":
-        {
-          const positionDifference = nowStepState.position - targetPosition;
-          const springForce = positionDifference * -stiffness;
-          const dampingForce = nowStepState.velocity * damping;
-          const force = springForce - dampingForce;
-          const acceleration = force / mass;
-          const accelerationWithTime = acceleration * physicsTimestep;
-
-          newVelocity = nowStepState.velocity + accelerationWithTime;
         }
-        break;
-      case "slide":
-        newVelocity = nowStepState.velocity * Math.pow(1 - friction, physicsTimestepInSeconds * 10);
-        break;
-      case "drag":
-        break;
-      case "push":
-        break;
-      default:
-    }
+      : undefined
+  );
+}
 
-    const amountMoved = newVelocity * physicsTimestepInSeconds;
-    let newAmount = nowStepState.position + amountMoved;
+function runMultiPhysicsStep(
+  nowStepState: { position: number; velocity: number },
+  targetPosition: number,
+  moveMode: MoveMode = "spring",
+  physicsOptions: any
+) {
+  const { stiffness, damping, mass, friction } = physicsOptions;
 
-    nowStepState.position = newAmount;
-    nowStepState.velocity = newVelocity;
+  let newVelocity: number = nowStepState.velocity;
 
-    // return { position: newAmount, velocity: newVelocity };
+  switch (moveMode) {
+    case "spring":
+      {
+        const positionDifference = nowStepState.position - targetPosition;
+        const springForce = positionDifference * -stiffness;
+        const dampingForce = nowStepState.velocity * damping;
+        const force = springForce - dampingForce;
+        const acceleration = force / mass;
+        const accelerationWithTime = acceleration * physicsTimestep;
+
+        newVelocity = nowStepState.velocity + accelerationWithTime;
+      }
+      break;
+    case "slide":
+      newVelocity = nowStepState.velocity * Math.pow(1 - friction, physicsTimestepInSeconds * 10);
+      break;
+    case "drag":
+      break;
+    case "push":
+      break;
+    default:
   }
 
-  return {
-    moverMultiRefs,
-    runMoverMulti,
-  };
+  const amountMoved = newVelocity * physicsTimestepInSeconds;
+  let newAmount = nowStepState.position + amountMoved;
+
+  nowStepState.position = newAmount;
+  nowStepState.velocity = newVelocity;
+
+  // return { position: newAmount, velocity: newVelocity };
 }
+
+// return {
+//   moverMultiRefs,
+//   runMoverMulti,
+// };
+// }

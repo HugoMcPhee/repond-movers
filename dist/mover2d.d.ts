@@ -1,5 +1,6 @@
 import { defaultPosition, Point2D } from "chootils/dist/points2d";
-import { MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
+import { ItemType } from "repond";
+import { MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
 export declare type PositionAndVelocity = {
     position: Point2D;
     velocity: Point2D;
@@ -28,27 +29,5 @@ export declare function mover2dRefs<T_Name extends string>(newName: T_Name, conf
     };
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
-export declare function makeMover2dUtils<T_GetState extends () => any, T_GetRefs extends () => any, T_SetState extends (newState: Record<any, any> | ((state: any) => any), callback?: (nextFrameDuration: number) => any) => any>(conceptoFuncs: {
-    getState: T_GetState;
-    getRefs: T_GetRefs;
-    setState: T_SetState;
-}): {
-    mover2dState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
-        value?: Point2D;
-        valueGoal?: Point2D;
-        isMoving?: boolean;
-        moveConfigName?: T_PhysicsNames;
-        moveMode?: MoveMode;
-        moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-    }>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, Point2D> & Record<`${T_Name}Goal`, Point2D> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
-    mover2dRefs: typeof mover2dRefs;
-    runMover2d: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, name: itemId, type: itemType, mover: moverName, onSlow, autoRerun, }: {
-        onSlow?: () => any;
-        name: string;
-        type: T_ItemType;
-        frameDuration?: number;
-        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]] & string;
-        autoRerun?: boolean;
-    }) => void;
-};
+export declare function runMover2d<T_ItemType extends ItemType>({ frameDuration, name: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }: RunMoverOptions<T_ItemType>): void;
 export {};

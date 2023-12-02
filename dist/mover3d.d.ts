@@ -1,4 +1,5 @@
-import { defaultPosition, Point3D } from "chootils/dist/points3d";
+import { Point3D, defaultPosition } from "chootils/dist/points3d";
+import { AllRefs, AllState } from "repond";
 import { MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
 export declare type PositionAndVelocity = {
     position: Point3D;
@@ -28,27 +29,16 @@ export declare function mover3dRefs<T_Name extends string>(newName: T_Name, conf
     };
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
-export declare function makeMover3dUtils<T_GetState extends () => any, T_GetRefs extends () => any, T_SetState extends (newState: Record<any, any> | ((state: any) => any), callback?: (nextFrameDuration: number) => any) => any>(conceptoFuncs: {
-    getState: T_GetState;
-    getRefs: T_GetRefs;
-    setState: T_SetState;
-}): {
-    mover3dState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
-        value?: Point3D;
-        valueGoal?: Point3D;
-        isMoving?: boolean;
-        moveConfigName?: T_PhysicsNames;
-        moveMode?: MoveMode;
-        moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-    }>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, Point3D> & Record<`${T_Name}Goal`, Point3D> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
-    mover3dRefs: typeof mover3dRefs;
-    runMover3d: <T_ItemType extends keyof ReturnType<T_GetState> & keyof ReturnType<T_GetRefs>>({ frameDuration, name: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: {
-        onSlow?: () => any;
-        name: string;
-        type: T_ItemType;
-        frameDuration?: number;
-        mover: keyof ReturnType<T_GetState>[T_ItemType][keyof ReturnType<T_GetState>[T_ItemType]] & string;
-        autoRerun?: boolean;
-    }) => void;
+declare type ItemType = keyof AllState & keyof AllRefs;
+declare type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
+declare type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
+declare type RunMoverOptions<T_ItemType extends ItemType> = {
+    onSlow?: () => any;
+    name: string;
+    type: T_ItemType;
+    frameDuration?: number;
+    mover: StateNameProperty<T_ItemType> & string;
+    autoRerun?: boolean;
 };
+export declare function runMover3d<T_ItemType extends ItemType>({ frameDuration, name: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
 export {};
