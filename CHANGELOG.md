@@ -3,6 +3,11 @@ TODO
 - update mover2d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
 - use position pool objects where copyPoint is used, (like for prevStepState & currentStepState)
 
+v0.10.0
+
+- use imports from repond
+- dont need factory functions anymore!
+
 v0.7.0
 
 - added addMoverRules to automatically add mover rules for a mover
