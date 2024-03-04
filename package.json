@@ -1,6 +1,6 @@
 {
   "name": "repond-movers",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "movers for repond",
   "_main": "src/index.ts",
   "types": "src/index.ts",
@@ -34,7 +34,7 @@
     "chootils": "^0.3.9",
     "react": "^17.0.2",
     "typescript": "^4.4.3",
-    "repond": "^0.10.2"
+    "repond": "^0.11.2"
   },
   "prettier": {
     "printWidth": 120

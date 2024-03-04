@@ -30,16 +30,16 @@ const runMoverFunctionsByType = {
   multi: runMoverMulti,
 } as const;
 
-export function addMoverRules<T_ItemType extends ItemType>(
-  store: T_ItemType & string,
-  moverName: StateNameProperty<T_ItemType>,
+export function addMoverRules<T_ItemType extends ItemType, T_Name extends StateNameProperty<T_ItemType>>(
+  store: T_ItemType,
+  moverName: T_Name,
   moverType: MoverType = "1d"
 ) {
   const isMovingKey = `${moverName}IsMoving`;
   const moveModePropKey = `${moverName}MoveMode`;
   const moverRefsKey = `${moverName}MoverRefs`;
 
-  const runMoverFunction = runMoverFunctionsByType[moverType];
+  const runMoverFunction = runMoverFunctionsByType[moverType] as unknown as typeof runMover1d;
 
   // make something the same as runMover1d, but instead of doing a setState callback loop, make a temporary rule like the pattern below:
 
@@ -101,10 +101,11 @@ export function addMoverRules<T_ItemType extends ItemType>(
       }
     },
     check: { type: store, prop: moverName + "Goal" },
-    step: "moversGoal",
+    step: "moversGoal" as const,
     atStepEnd: true,
     _isPerItem: true,
   };
+
   const startedMovingRule = {
     run({ itemName }) {
       // runMoverFunction({ name: itemName, type: store, mover: moverName });
@@ -115,7 +116,7 @@ export function addMoverRules<T_ItemType extends ItemType>(
       }
     },
     check: { type: store, prop: isMovingKey, becomes: true },
-    step: "moversStart",
+    step: "moversStart" as const,
     atStepEnd: true,
     _isPerItem: true,
   };
@@ -123,7 +124,7 @@ export function addMoverRules<T_ItemType extends ItemType>(
   return {
     [`${moverName}GoalChanged`]: valueGoalChangedRule,
     [`when${moverName}StartedMoving`]: startedMovingRule,
-  };
+  } as Record<`${T_Name}GoalChanged`, any> & Record<`${T_Name}StartedMoving`, any>;
 }
 
 export function runMover<T_ItemType extends ItemType>(
@@ -141,7 +142,7 @@ export function runMover<T_ItemType extends ItemType>(
     mover: StateNameProperty<T_ItemType>;
   }
 ) {
-  const runMoverFunction = runMoverFunctionsByType[moverType];
+  const runMoverFunction = runMoverFunctionsByType[moverType] as unknown as typeof runMover1d;
 
   return runMoverFunction({
     frameDuration: frameDuration ?? 16.6667,
