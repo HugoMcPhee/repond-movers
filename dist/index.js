@@ -1,4 +1,4 @@
-import { getPreviousState, getState, setState, startEffect, stopEffect } from "repond";
+import { getPrevState, getState, setState, startNewEffect, stopNewEffect } from "repond";
 import { meta } from "./meta";
 import { runMover1d } from "./mover1d";
 import { runMover2d } from "./mover2d";
@@ -34,13 +34,13 @@ export function addMoverRules(store, moverName, moverType = "1d") {
         const timeNameKey = meta.timeElapsedStatePath[1];
         const timePropKey = meta.timeElapsedStatePath[2];
         const ruleName = "moverValueRule" + store + moverName + moverType + Math.random();
-        startEffect({
+        startNewEffect({
             name: ruleName,
             run: () => {
                 const newTimeElapsed = getState()[timeStoreKey][timeNameKey][timePropKey];
-                const prevTimeElapsed = getPreviousState()[timeStoreKey][timeNameKey][timePropKey];
+                const prevTimeElapsed = getPrevState()[timeStoreKey][timeNameKey][timePropKey];
                 if (!getState()[store]?.[itemName]?.[isMovingKey]) {
-                    stopEffect(ruleName);
+                    stopNewEffect(ruleName);
                 }
                 else {
                     const timeDuration = newTimeElapsed - prevTimeElapsed;
