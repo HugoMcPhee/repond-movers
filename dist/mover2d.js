@@ -27,13 +27,13 @@ export function mover2dRefs(newName, config) {
 }
 const rerunOptions = {
     frameDuration: 16.6667,
-    name: "",
+    id: "",
     type: "",
     onSlow: undefined,
     mover: "",
     autoRerun: true,
 };
-export function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }) {
+export function runMover2d({ frameDuration = 16.6667, id: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }) {
     // repeated for all movers Start
     const itemRefs = getRefs()[itemType][itemId];
     const itemState = getState()[itemType][itemId];
@@ -115,7 +115,7 @@ export function runMover2d({ frameDuration = 16.6667, name: itemId, type: itemTy
             // the next frame mover always runs at the very start of the next frame
             // could add a fow option to movers to react to a frame tick on specific frame
             rerunOptions.frameDuration = nextFrameDuration;
-            rerunOptions.name = itemId;
+            rerunOptions.id = itemId;
             rerunOptions.type = itemType;
             rerunOptions.onSlow = onSlow;
             rerunOptions.mover = moverName;

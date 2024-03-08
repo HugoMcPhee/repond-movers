@@ -4,6 +4,7 @@ import { runMover1d } from "./mover1d";
 import { runMover2d } from "./mover2d";
 import { runMover3d } from "./mover3d";
 import { runMoverMulti } from "./moverMulti";
+import { makeItemEffect } from "repond";
 export { moverRefs, moverState } from "./mover1d";
 export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";
@@ -18,50 +19,50 @@ const runMoverFunctionsByType = {
     "3d": runMover3d,
     multi: runMoverMulti,
 };
-export function addMoverRules(store, moverName, moverType = "1d") {
+export function addMoverEffects(store, moverName, moverType = "1d") {
     const isMovingKey = `${moverName}IsMoving`;
     const moveModePropKey = `${moverName}MoveMode`;
     const moverRefsKey = `${moverName}MoverRefs`;
     const runMoverFunction = runMoverFunctionsByType[moverType];
-    // make something the same as runMover1d, but instead of doing a setState callback loop, make a temporary rule like the pattern below:
-    // add a rule, that listens to the elapsed time state changing,
+    // make something the same as runMover1d, but instead of doing a setState callback loop, make a temporary effect like the pattern below:
+    // add an effect, that listens to the elapsed time state changing,
     // and each time, if isMoving is true, run the mover again
-    // if it's false, remove the rule
-    function startMoverMoveRule({ itemName }) {
+    // if it's false, remove the effect
+    function startMoverMoveEffect({ itemId }) {
         if (!meta.timeElapsedStatePath)
             return;
         const timeStoreKey = meta.timeElapsedStatePath[0];
         const timeNameKey = meta.timeElapsedStatePath[1];
         const timePropKey = meta.timeElapsedStatePath[2];
-        const ruleName = "moverValueRule" + store + moverName + moverType + Math.random();
+        const effectId = "moverValueEffect" + store + moverName + moverType + Math.random();
         startNewEffect({
-            name: ruleName,
+            id: effectId,
             run: () => {
                 const newTimeElapsed = getState()[timeStoreKey][timeNameKey][timePropKey];
                 const prevTimeElapsed = getPrevState()[timeStoreKey][timeNameKey][timePropKey];
-                if (!getState()[store]?.[itemName]?.[isMovingKey]) {
-                    stopNewEffect(ruleName);
+                if (!getState()[store]?.[itemId]?.[isMovingKey]) {
+                    stopNewEffect(effectId);
                 }
                 else {
                     const timeDuration = newTimeElapsed - prevTimeElapsed;
                     runMoverFunction({
                         mover: moverName,
-                        name: itemName,
+                        id: itemId,
                         type: store,
                         frameDuration: timeDuration,
                         autoRerun: false,
                     });
                 }
             },
-            check: { type: [timeStoreKey], name: [timeNameKey], prop: [timePropKey] },
+            check: { type: [timeStoreKey], id: [timeNameKey], prop: [timePropKey] },
             step: "moverUpdates",
             atStepEnd: true,
         });
-        return ruleName;
+        return effectId;
     }
-    const valueGoalChangedRule = {
-        run({ itemName, itemState, itemRefs, }) {
-            setState({ [store]: { [itemName]: { [isMovingKey]: true } } });
+    const valueGoalChangedEffect = makeItemEffect({
+        run({ itemId, itemState, itemRefs, }) {
+            setState({ [store]: { [itemId]: { [isMovingKey]: true } } });
             if (moverType === "3d") {
                 const moveMode = itemState[moveModePropKey];
                 // TEMPORARY : ideally this is automatic for movers? (when isMoving becoems true?)
@@ -70,37 +71,35 @@ export function addMoverRules(store, moverName, moverType = "1d") {
                     itemRefs[moverRefsKey].recentSpeeds = [];
             }
         },
-        check: { type: store, prop: moverName + "Goal" },
+        check: { type: store, prop: (moverName + "Goal") },
         step: "moversGoal",
         atStepEnd: true,
-        _isPerItem: true,
-    };
-    const startedMovingRule = {
-        run({ itemName }) {
-            // runMoverFunction({ name: itemName, type: store, mover: moverName });
+    });
+    const startedMovingEffect = makeItemEffect({
+        run({ itemId }) {
+            // runMoverFunction({ id: itemName, type: store, mover: moverName });
             if (meta.timeElapsedStatePath) {
-                startMoverMoveRule({ itemName });
+                startMoverMoveEffect({ itemId: itemId });
             }
             else {
-                runMoverFunction({ mover: moverName, name: itemName, type: store, autoRerun: true });
+                runMoverFunction({ mover: moverName, id: itemId, type: store, autoRerun: true });
             }
         },
         check: { type: store, prop: isMovingKey, becomes: true },
         step: "moversStart",
         atStepEnd: true,
-        _isPerItem: true,
-    };
+    });
     return {
-        [`${moverName}GoalChanged`]: valueGoalChangedRule,
-        [`when${moverName}StartedMoving`]: startedMovingRule,
+        [`${moverName}GoalChanged`]: valueGoalChangedEffect,
+        [`when${moverName}StartedMoving`]: startedMovingEffect,
     };
 }
-export function runMover(moverType, { frameDuration, store, name: itemId, mover: moverName, }) {
+export function runMover(moverType, { frameDuration, store, id: itemId, mover: moverName, }) {
     const runMoverFunction = runMoverFunctionsByType[moverType];
     return runMoverFunction({
         frameDuration: frameDuration ?? 16.6667,
         type: store,
-        name: itemId,
+        id: itemId,
         mover: moverName,
     });
 }

@@ -16,5 +16,5 @@ export declare function moverMultiRefs<T_Name extends string, T_AnimNames extend
     animRefs: Record<T_AnimNames[number], OneAnimRefs>;
     animNames: T_AnimNames;
 }>;
-export declare function runMoverMulti<T_ItemType extends ItemType>({ frameDuration, type: itemType, name: itemId, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
+export declare function runMoverMulti<T_ItemType extends ItemType>({ frameDuration, type: itemType, id: itemId, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
 export {};

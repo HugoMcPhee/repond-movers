@@ -25,5 +25,5 @@ export declare function moverRefs<T_Name extends string>(newName: T_Name, config
     };
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
-export declare function runMover1d<T_ItemType extends ItemType>({ frameDuration, type: itemType, name: itemId, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
+export declare function runMover1d<T_ItemType extends ItemType>({ frameDuration, type: itemType, id: itemId, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
 export {};

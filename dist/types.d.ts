@@ -48,7 +48,7 @@ export declare type AnyMoverStateNames = {
 };
 export declare type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
-    name: string;
+    id: string;
     type: T_ItemType;
     frameDuration?: number;
     mover: StateNameProperty<T_ItemType> & string;
