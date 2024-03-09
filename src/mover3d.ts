@@ -85,7 +85,7 @@ type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllStat
 type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
 type RunMoverOptions<T_ItemType extends ItemType> = {
   onSlow?: () => any;
-  name: string;
+  id: string;
   type: T_ItemType;
   frameDuration?: number;
   mover: StateNameProperty<T_ItemType> & string;
@@ -95,7 +95,7 @@ type RunMoverOptions<T_ItemType extends ItemType> = {
 
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,
-  name: "",
+  id: "",
   type: "",
   onSlow: undefined,
   mover: "",
@@ -104,7 +104,7 @@ const rerunOptions: RunMoverOptions<any> = {
 
 export function runMover3d<T_ItemType extends ItemType>({
   frameDuration = 16.6667,
-  name: itemId,
+  id: itemId,
   type: itemType,
   onSlow,
   mover: moverName,
@@ -232,7 +232,7 @@ export function runMover3d<T_ItemType extends ItemType>({
       if (!autoRerun) return;
       if (itemState[keys.isMoving]) {
         rerunOptions.frameDuration = nextFrameDuration;
-        rerunOptions.name = itemId;
+        rerunOptions.id = itemId;
         rerunOptions.type = itemType;
         rerunOptions.onSlow = onSlow;
         rerunOptions.mover = moverName;

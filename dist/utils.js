@@ -32,11 +32,9 @@ export function makeMoverStateMaker(getDefaultValue) {
     return function moverState(newName, initialState) {
         const newStateProps = {};
         newStateProps[newName] = initialState?.value ?? getDefaultValue();
-        newStateProps[`${newName}Goal`] =
-            initialState?.valueGoal ?? getDefaultValue();
+        newStateProps[`${newName}Goal`] = initialState?.valueGoal ?? getDefaultValue();
         newStateProps[`${newName}IsMoving`] = initialState?.isMoving ?? false;
-        newStateProps[`${newName}MoveMode`] =
-            initialState?.moveMode ?? "spring";
+        newStateProps[`${newName}MoveMode`] = initialState?.moveMode ?? "spring";
         if (initialState?.moveConfigName) {
             newStateProps[`${newName}MoveConfigName`] = initialState?.moveConfigName;
         }
@@ -47,6 +45,7 @@ export function makeMoverStateMaker(getDefaultValue) {
         return newStateProps;
     };
 }
+// makes the item state prop names for a mover
 export function makeStateNames(newName) {
     return {
         value: newName,

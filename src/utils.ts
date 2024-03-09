@@ -1,16 +1,7 @@
 import { defaultPhysics } from "./consts";
-import {
-  DefinedPhysicsConfig,
-  MoveMode,
-  MoverMode,
-  PhysicsConfig,
-  PhysicsOptions,
-} from "./types";
+import { DefinedPhysicsConfig, MoveMode, MoverMode, PhysicsConfig, PhysicsOptions } from "./types";
 
-export function normalizeDefinedPhysicsConfig(
-  theConfig: PhysicsConfig,
-  mode: MoverMode
-) {
+export function normalizeDefinedPhysicsConfig(theConfig: PhysicsConfig, mode: MoverMode) {
   if (theConfig === undefined) {
     return { default: { ...defaultPhysics(mode) } };
   }
@@ -55,13 +46,8 @@ export type NewProps<T_Name extends string, T_ValueType extends any> = {
 };
 
 // could make util makeMakerMoverState, that takes a initialValue function (and they type and initial values can be got from that)
-export function makeMoverStateMaker<T_ValueType>(
-  getDefaultValue: () => T_ValueType
-) {
-  type MoverInitialState<
-    T_ValueType extends any,
-    T_MoveConfigName extends string
-  > = {
+export function makeMoverStateMaker<T_ValueType>(getDefaultValue: () => T_ValueType) {
+  type MoverInitialState<T_ValueType extends any, T_MoveConfigName extends string> = {
     value?: T_ValueType;
     valueGoal?: T_ValueType;
     isMoving?: boolean;
@@ -91,11 +77,9 @@ export function makeMoverStateMaker<T_ValueType>(
     const newStateProps = {} as Record<any, any>;
 
     newStateProps[newName] = initialState?.value ?? getDefaultValue();
-    newStateProps[`${newName}Goal`] =
-      initialState?.valueGoal ?? getDefaultValue();
+    newStateProps[`${newName}Goal`] = initialState?.valueGoal ?? getDefaultValue();
     newStateProps[`${newName}IsMoving`] = initialState?.isMoving ?? false;
-    newStateProps[`${newName}MoveMode`] =
-      initialState?.moveMode ?? ("spring" as MoveMode);
+    newStateProps[`${newName}MoveMode`] = initialState?.moveMode ?? ("spring" as MoveMode);
 
     if (initialState?.moveConfigName) {
       newStateProps[`${newName}MoveConfigName`] = initialState?.moveConfigName;
@@ -109,17 +93,14 @@ export function makeMoverStateMaker<T_ValueType>(
   };
 }
 
+// makes the item state prop names for a mover
 export function makeStateNames<T_Name extends string>(newName: T_Name) {
   return {
     value: newName as T_Name,
     valueGoal: `${newName}Goal` as `${T_Name}Goal`,
     isMoving: `${newName}IsMoving` as `${T_Name}IsMoving`,
     moveMode: `${newName}MoveMode` as `${T_Name}MoveMode`,
-    physicsConfigName: `${newName}MoveConfigName` as
-      | `${T_Name}MoveConfigName`
-      | undefined,
-    physicsConfigs: `${newName}MoveConfigs` as
-      | `${T_Name}MoveConfigs`
-      | undefined,
+    physicsConfigName: `${newName}MoveConfigName` as `${T_Name}MoveConfigName` | undefined,
+    physicsConfigs: `${newName}MoveConfigs` as `${T_Name}MoveConfigs` | undefined,
   };
 }

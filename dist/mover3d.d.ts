@@ -34,11 +34,11 @@ declare type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof
 declare type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
 declare type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
-    name: string;
+    id: string;
     type: T_ItemType;
     frameDuration?: number;
     mover: StateNameProperty<T_ItemType> & string;
     autoRerun?: boolean;
 };
-export declare function runMover3d<T_ItemType extends ItemType>({ frameDuration, name: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
+export declare function runMover3d<T_ItemType extends ItemType>({ frameDuration, id: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
 export {};

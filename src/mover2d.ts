@@ -82,7 +82,7 @@ export function mover2dRefs<T_Name extends string>(newName: T_Name, config?: Phy
 
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,
-  name: "",
+  id: "",
   type: "",
   onSlow: undefined,
   mover: "",
@@ -91,7 +91,7 @@ const rerunOptions: RunMoverOptions<any> = {
 
 export function runMover2d<T_ItemType extends ItemType>({
   frameDuration = 16.6667,
-  name: itemId,
+  id: itemId,
   type: itemType,
   mover: moverName,
   autoRerun,
@@ -206,7 +206,7 @@ export function runMover2d<T_ItemType extends ItemType>({
         // could add a fow option to movers to react to a frame tick on specific frame
 
         rerunOptions.frameDuration = nextFrameDuration;
-        rerunOptions.name = itemId;
+        rerunOptions.id = itemId;
         rerunOptions.type = itemType;
         rerunOptions.onSlow = onSlow;
         rerunOptions.mover = moverName;

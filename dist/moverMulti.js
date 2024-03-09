@@ -39,13 +39,13 @@ export function moverMultiRefs(newName, animNames, config) {
 }
 const rerunOptions = {
     frameDuration: 16.6667,
-    name: "",
+    id: "",
     type: "",
     onSlow: undefined,
     mover: "",
     autoRerun: true,
 };
-export function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: itemId, mover: moverName, autoRerun, }) {
+export function runMoverMulti({ frameDuration = 16.6667, type: itemType, id: itemId, mover: moverName, autoRerun, }) {
     // repeated for all movers Start
     const itemRefs = getRefs()[itemType][itemId];
     const itemState = getState()[itemType][itemId];
@@ -107,7 +107,7 @@ export function runMoverMulti({ frameDuration = 16.6667, type: itemType, name: i
             const newItemState = getState()[itemType][itemId];
             if (newItemState?.[keys.isMoving]) {
                 rerunOptions.frameDuration = nextFrameDuration;
-                rerunOptions.name = itemId;
+                rerunOptions.id = itemId;
                 rerunOptions.type = itemType;
                 rerunOptions.mover = moverName;
                 runMoverMulti(rerunOptions);

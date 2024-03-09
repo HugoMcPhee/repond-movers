@@ -66,7 +66,7 @@ export function moverRefs<T_Name extends string>(newName: T_Name, config?: Physi
 
 const rerunOptions: RunMoverOptions<any> = {
   frameDuration: 16.6667,
-  name: "",
+  id: "",
   type: "",
   onSlow: undefined,
   mover: "",
@@ -76,7 +76,7 @@ const rerunOptions: RunMoverOptions<any> = {
 export function runMover1d<T_ItemType extends ItemType>({
   frameDuration = 16.6667,
   type: itemType,
-  name: itemId,
+  id: itemId,
   mover: moverName,
   autoRerun,
 }: // onSlow,
@@ -163,7 +163,7 @@ RunMoverOptions<T_ItemType>) {
           const newItemState = (getState() as any)[itemType][itemId];
           if (newItemState?.[keys.isMoving]) {
             rerunOptions.frameDuration = nextFrameDuration;
-            rerunOptions.name = itemId;
+            rerunOptions.id = itemId;
             rerunOptions.type = itemType;
             rerunOptions.mover = moverName;
             rerunOptions.autoRerun = autoRerun;
