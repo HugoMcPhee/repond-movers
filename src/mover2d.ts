@@ -164,58 +164,58 @@ export function runMover2d<T_ItemType extends ItemType>({
   if (isAutoMovementType) shouldKeepMoving = itemState[keys.isMoving] && averageSpeed > springStopSpeed;
   // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
 
-  if (!shouldKeepMoving) {
-    // console.log("shouldKeepMoving", shouldKeepMoving);
+  const shouldStopMoving = !shouldKeepMoving;
 
-    setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
-  }
+  if (shouldStopMoving) {
+    setState({ [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: itemState[keys.valueGoal] } } });
+  } else {
+    setState(
+      (state) => {
+        const currentPosition = (state as any)[itemType][itemId][keys.value];
+        const positionDifference = subtractPointsSafer(newPosition, originalPositon);
 
-  setState(
-    (state) => {
-      const currentPosition = (state as any)[itemType][itemId][keys.value];
-      const positionDifference = subtractPointsSafer(newPosition, originalPositon);
+        if (pointIsZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
 
-      if (pointIsZero(positionDifference)) {
-        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-      }
+        if (pointBasicallyZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
 
-      if (pointBasicallyZero(positionDifference)) {
-        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-      }
+        const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
 
-      const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
+        return {
+          [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
+        };
+      },
+      (nextFrameDuration) => {
+        const newItemState = (getState() as any)[itemType][itemId] as any;
 
-      return {
-        [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
-      };
-    },
-    (nextFrameDuration) => {
-      const newItemState = (getState() as any)[itemType][itemId] as any;
+        // NOTE possibly move this so the callback isn't needed
+        if (isAutoMovementType) {
+          if (moverRefs.canRunOnSlow && averageSpeed < 150) {
+            moverRefs.canRunOnSlow = false;
+            onSlow?.();
+          }
+        }
+        if (!autoRerun) return;
+        if (newItemState[keys.isMoving]) {
+          // NOTE
+          // the next frame mover always runs at the very start of the next frame
+          // could add a fow option to movers to react to a frame tick on specific frame
 
-      // NOTE possibly move this so the callback isn't needed
-      if (isAutoMovementType) {
-        if (moverRefs.canRunOnSlow && averageSpeed < 150) {
-          moverRefs.canRunOnSlow = false;
-          onSlow?.();
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.id = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.onSlow = onSlow;
+          rerunOptions.mover = moverName;
+          rerunOptions.autoRerun = autoRerun;
+
+          runMover2d(rerunOptions);
         }
       }
-      if (!autoRerun) return;
-      if (newItemState[keys.isMoving]) {
-        // NOTE
-        // the next frame mover always runs at the very start of the next frame
-        // could add a fow option to movers to react to a frame tick on specific frame
-
-        rerunOptions.frameDuration = nextFrameDuration;
-        rerunOptions.id = itemId;
-        rerunOptions.type = itemType;
-        rerunOptions.onSlow = onSlow;
-        rerunOptions.mover = moverName;
-        rerunOptions.autoRerun = autoRerun;
-
-        runMover2d(rerunOptions);
-      }
-    }
-  );
+    );
+  }
 }
 
 // runPhysicsStepObjectPool

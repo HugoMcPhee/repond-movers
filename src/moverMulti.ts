@@ -145,42 +145,48 @@ RunMoverOptions<T_ItemType>) {
 
     const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
     let isStillMoving = Math.abs(averageSpeed) > 0.003;
-    let shouldStopMoving = !isStillMoving;
+    let animShouldStopMoving = !isStillMoving;
     if (moveMode === "spring") {
       let isStillMoving = Math.abs(averageSpeed) > 0.01;
-      shouldStopMoving = !isStillMoving && isNearTarget;
+      animShouldStopMoving = !isStillMoving && isNearTarget;
     }
 
-    if (!shouldStopMoving) {
+    if (!animShouldStopMoving) {
       // if one anim is still moving, keep running the multi mover
       shouldKeepGoing = true;
     }
   });
 
   // if shouldStopMoving for each anim is true
+  const shouldStopMoving = !shouldKeepGoing;
 
-  if (!shouldKeepGoing) {
-    setState({
-      [itemType]: { [itemId]: { [keys.isMoving]: false } },
+  if (shouldStopMoving) {
+    // set all the newMoverState animations to be the target/goal positions
+    forEach(animNames, (animName) => {
+      newMoverState[animName] = itemState[keys.valueGoal][animName];
     });
-  }
 
-  setState(
-    { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
-    autoRerun
-      ? (nextFrameDuration) => {
-          const newItemState = (getState() as any)[itemType][itemId];
-          if (newItemState?.[keys.isMoving]) {
-            rerunOptions.frameDuration = nextFrameDuration;
-            rerunOptions.id = itemId;
-            rerunOptions.type = itemType;
-            rerunOptions.mover = moverName;
+    setState({
+      [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: newMoverState } },
+    });
+  } else {
+    setState(
+      { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
+      autoRerun
+        ? (nextFrameDuration) => {
+            const newItemState = (getState() as any)[itemType][itemId];
+            if (newItemState?.[keys.isMoving]) {
+              rerunOptions.frameDuration = nextFrameDuration;
+              rerunOptions.id = itemId;
+              rerunOptions.type = itemType;
+              rerunOptions.mover = moverName;
 
-            runMoverMulti(rerunOptions);
+              runMoverMulti(rerunOptions);
+            }
           }
-        }
-      : undefined
-  );
+        : undefined
+    );
+  }
 }
 
 function runMultiPhysicsStep(

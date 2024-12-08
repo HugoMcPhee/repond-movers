@@ -149,30 +149,28 @@ RunMoverOptions<T_ItemType>) {
   }
 
   if (shouldStopMoving) {
-    // console.log("should stop moving");
-
     setState({
-      [itemType]: { [itemId]: { [keys.isMoving]: false } },
+      [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: itemState[keys.valueGoal] } },
     });
-  }
+  } else {
+    setState(
+      { [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } },
+      autoRerun
+        ? (nextFrameDuration) => {
+            const newItemState = (getState() as any)[itemType][itemId];
+            if (newItemState?.[keys.isMoving]) {
+              rerunOptions.frameDuration = nextFrameDuration;
+              rerunOptions.id = itemId;
+              rerunOptions.type = itemType;
+              rerunOptions.mover = moverName;
+              rerunOptions.autoRerun = autoRerun;
 
-  setState(
-    { [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } },
-    autoRerun
-      ? (nextFrameDuration) => {
-          const newItemState = (getState() as any)[itemType][itemId];
-          if (newItemState?.[keys.isMoving]) {
-            rerunOptions.frameDuration = nextFrameDuration;
-            rerunOptions.id = itemId;
-            rerunOptions.type = itemType;
-            rerunOptions.mover = moverName;
-            rerunOptions.autoRerun = autoRerun;
-
-            runMover1d(rerunOptions);
+              runMover1d(rerunOptions);
+            }
           }
-        }
-      : undefined
-  );
+        : undefined
+    );
+  }
 }
 
 function run1dPhysicsStep(

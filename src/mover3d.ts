@@ -194,54 +194,58 @@ export function runMover3d<T_ItemType extends ItemType>({
     }
   }
 
-  if (!shouldKeepMoving) setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+  const shouldStopMoving = !shouldKeepMoving;
 
-  setState(
-    (state) => {
-      const currentPosition = (state as any)[itemType][itemId][keys.value];
+  if (shouldStopMoving) {
+    setState({ [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: itemState[keys.valueGoal] } } });
+  } else {
+    setState(
+      (state) => {
+        const currentPosition = (state as any)[itemType][itemId][keys.value];
 
-      const positionDifference = subtractPointsSafer(newPosition, originalPositon);
+        const positionDifference = subtractPointsSafer(newPosition, originalPositon);
 
-      const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
-      // console.log("diff", Math.abs(positionDifference.x));
+        const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
+        // console.log("diff", Math.abs(positionDifference.x));
 
-      // if (moveMode === "push" || moveMode === "slide") {
-      // console.log("moveMode", moveMode);
+        // if (moveMode === "push" || moveMode === "slide") {
+        // console.log("moveMode", moveMode);
 
-      if (pointIsZero(positionDifference)) {
-        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-      }
+        if (pointIsZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
 
-      if (pointBasicallyZero(positionDifference)) {
-        return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-      }
-      // }
+        if (pointBasicallyZero(positionDifference)) {
+          return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        }
+        // }
 
-      // console.log(positionDifference, "positionDifference");
-      return {
-        [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
-      };
-    },
-    (nextFrameDuration) => {
-      if (isAutoMovementType) {
-        if (moverRefs.canRunOnSlow && averageSpeed < 150) {
-          moverRefs.canRunOnSlow = false;
-          onSlow?.();
+        // console.log(positionDifference, "positionDifference");
+        return {
+          [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
+        };
+      },
+      (nextFrameDuration) => {
+        if (isAutoMovementType) {
+          if (moverRefs.canRunOnSlow && averageSpeed < 150) {
+            moverRefs.canRunOnSlow = false;
+            onSlow?.();
+          }
+        }
+        if (!autoRerun) return;
+        if (itemState[keys.isMoving]) {
+          rerunOptions.frameDuration = nextFrameDuration;
+          rerunOptions.id = itemId;
+          rerunOptions.type = itemType;
+          rerunOptions.onSlow = onSlow;
+          rerunOptions.mover = moverName;
+          rerunOptions.autoRerun = autoRerun;
+
+          runMover3d(rerunOptions);
         }
       }
-      if (!autoRerun) return;
-      if (itemState[keys.isMoving]) {
-        rerunOptions.frameDuration = nextFrameDuration;
-        rerunOptions.id = itemId;
-        rerunOptions.type = itemType;
-        rerunOptions.onSlow = onSlow;
-        rerunOptions.mover = moverName;
-        rerunOptions.autoRerun = autoRerun;
-
-        runMover3d(rerunOptions);
-      }
-    }
-  );
+    );
+  }
 }
 
 // runPhysicsStepObjectPool
