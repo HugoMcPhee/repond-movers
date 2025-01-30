@@ -59,10 +59,10 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
     startNewEffect({
       id: effectId,
       run: () => {
-        const newTimeElapsed = getState()[timeStoreKey][timeNameKey][timePropKey];
-        const prevTimeElapsed = getPrevState()[timeStoreKey][timeNameKey][timePropKey];
+        const newTimeElapsed = getState(timeStoreKey, timeNameKey)[timePropKey];
+        const prevTimeElapsed = getPrevState(timeStoreKey, timeNameKey)[timePropKey];
 
-        if (!getState()[store]?.[itemId]?.[isMovingKey]) {
+        if (!getState(store, itemId)?.[isMovingKey]) {
           stopNewEffect(effectId);
         } else {
           const timeDuration = newTimeElapsed - prevTimeElapsed;
@@ -93,7 +93,7 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
       itemState: ItemState<T_ItemType>;
       itemRefs: ItemRefs<T_ItemType>;
     }) {
-      setState({ [store]: { [itemId]: { [isMovingKey]: true } } });
+      setState(`${store}.${isMovingKey}`, true, itemId);
       if (moverType === "3d") {
         const moveMode = itemState[moveModePropKey];
         // TEMPORARY : ideally this is automatic for movers? (when isMoving becoems true?)

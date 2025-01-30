@@ -12,7 +12,7 @@ New options:
 allow interpolating
 refNames.averageSpeed
 */
-import { AllRefs, AllState, getRefs, getState, setState } from "repond";
+import { AllRefs, AllState, getRefs, getState, onNextTick, setState } from "repond";
 import {
   defaultOptions,
   // maximumFrameTime,
@@ -89,7 +89,7 @@ export function runMoverMulti<T_ItemType extends ItemType>({
 RunMoverOptions<T_ItemType>) {
   // repeated for all movers Start
   const itemRefs = (getRefs() as any)[itemType][itemId] as any;
-  const itemState = (getState() as any)[itemType][itemId] as any;
+  const itemState = getState(itemType, itemId);
 
   const moverRefs = itemRefs[`${moverName}MoverRefs`] as Untyped_MoverRefs;
   const keys: AnyMoverStateNames = moverRefs.stateNames;
@@ -145,48 +145,37 @@ RunMoverOptions<T_ItemType>) {
 
     const isNearTarget = Math.abs(itemState[keys.value][animName] - targetPosition) < 0.01;
     let isStillMoving = Math.abs(averageSpeed) > 0.003;
-    let animShouldStopMoving = !isStillMoving;
+    let shouldStopMoving = !isStillMoving;
     if (moveMode === "spring") {
       let isStillMoving = Math.abs(averageSpeed) > 0.01;
-      animShouldStopMoving = !isStillMoving && isNearTarget;
+      shouldStopMoving = !isStillMoving && isNearTarget;
     }
 
-    if (!animShouldStopMoving) {
+    if (!shouldStopMoving) {
       // if one anim is still moving, keep running the multi mover
       shouldKeepGoing = true;
     }
   });
 
   // if shouldStopMoving for each anim is true
-  const shouldStopMoving = !shouldKeepGoing;
 
-  if (shouldStopMoving) {
-    // set all the newMoverState animations to be the target/goal positions
-    forEach(animNames, (animName) => {
-      newMoverState[animName] = itemState[keys.valueGoal][animName];
-    });
-
-    setState({
-      [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: newMoverState } },
-    });
-  } else {
-    setState(
-      { [itemType]: { [itemId]: { [keys.value]: newMoverState } } },
-      autoRerun
-        ? (nextFrameDuration) => {
-            const newItemState = (getState() as any)[itemType][itemId];
-            if (newItemState?.[keys.isMoving]) {
-              rerunOptions.frameDuration = nextFrameDuration;
-              rerunOptions.id = itemId;
-              rerunOptions.type = itemType;
-              rerunOptions.mover = moverName;
-
-              runMoverMulti(rerunOptions);
-            }
-          }
-        : undefined
-    );
+  if (!shouldKeepGoing) {
+    setState(`${itemType}.${keys.isMoving}`, false, itemId);
   }
+
+  setState(`${itemType}.${keys.value}`, newMoverState, itemId);
+
+  onNextTick((nextFrameDuration) => {
+    const newItemState = getState(itemType, itemId);
+    if (newItemState?.[keys.isMoving]) {
+      rerunOptions.frameDuration = nextFrameDuration;
+      rerunOptions.id = itemId;
+      rerunOptions.type = itemType;
+      rerunOptions.mover = moverName;
+
+      runMoverMulti(rerunOptions);
+    }
+  });
 }
 
 function runMultiPhysicsStep(
