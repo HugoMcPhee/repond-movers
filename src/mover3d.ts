@@ -111,7 +111,7 @@ export function runMover3d<T_ItemType extends ItemType>({
   autoRerun,
 }: RunMoverOptions<T_ItemType>) {
   // repeated for all movers Start
-  const itemRefs = (getRefs() as any)[itemType][itemId] as any;
+  const itemRefs = getRefs(itemType, itemId) as any;
   const itemState = getState(itemType, itemId);
 
   const moverRefs = itemRefs[`${moverName}MoverRefs`];
