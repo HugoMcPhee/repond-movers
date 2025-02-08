@@ -3,7 +3,7 @@ import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolat
 import { addPoints, dividePoint, multiplyPoint, subtractPoints } from "chootils/dist/points2dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance2d";
-import { getRefs, getState, setState } from "repond";
+import { getRefs, getState, onNextTick, setState, whenSettingStates } from "repond";
 import { defaultOptions, defaultPhysics, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 /*
@@ -35,8 +35,8 @@ const rerunOptions = {
 };
 export function runMover2d({ frameDuration = 16.6667, id: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }) {
     // repeated for all movers Start
-    const itemRefs = getRefs()[itemType][itemId];
-    const itemState = getState()[itemType][itemId];
+    const itemRefs = getRefs(itemType, itemId);
+    const itemState = getState(itemType, itemId);
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys = moverRefs.stateNames;
     const nowStepState = {
@@ -84,24 +84,20 @@ export function runMover2d({ frameDuration = 16.6667, id: itemId, type: itemType
     // console.log(itemState[keys.isMoving], averageSpeed, springStopSpeed);
     if (!shouldKeepMoving) {
         // console.log("shouldKeepMoving", shouldKeepMoving);
-        setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
+        setState(`${itemType}.${keys.isMoving}`, false, itemId);
     }
-    setState((state) => {
-        const currentPosition = state[itemType][itemId][keys.value];
+    whenSettingStates(() => {
+        const currentPosition = getState(itemType, itemId)[keys.value];
         const positionDifference = subtractPointsSafer(newPosition, originalPositon);
-        if (pointIsZero(positionDifference)) {
-            return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-        }
-        if (pointBasicallyZero(positionDifference)) {
-            return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        if (pointIsZero(positionDifference) || pointBasicallyZero(positionDifference)) {
+            setState(`${itemType}.${keys.isMoving}`, false, itemId);
         }
         const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
-        return {
-            [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
-        };
-    }, (nextFrameDuration) => {
-        const newItemState = getState()[itemType][itemId];
-        // NOTE possibly move this so the callback isn't needed
+        setState(`${itemType}.${keys.value}`, actualNewPosition, itemId);
+    });
+    onNextTick((nextFrameDuration) => {
+        const newItemState = getState(itemType, itemId);
+        // NOTE possibly move this so the onNextTick isn't needed
         if (isAutoMovementType) {
             if (moverRefs.canRunOnSlow && averageSpeed < 150) {
                 moverRefs.canRunOnSlow = false;

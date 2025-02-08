@@ -1,11 +1,20 @@
-import { AllState, ItemType, getPrevState, getState, setState, startNewEffect, stopNewEffect } from "repond";
+import {
+  AllState,
+  ItemType,
+  getPrevState,
+  getRefs,
+  getState,
+  makeEffect,
+  setState,
+  startNewEffect,
+  stopEffect,
+} from "repond";
 import { meta } from "./meta";
 import { runMover1d } from "./mover1d";
 import { runMover2d } from "./mover2d";
 import { runMover3d } from "./mover3d";
 import { runMoverMulti } from "./moverMulti";
 import { ItemRefs, ItemState, MoverType, StateNameProperty } from "./types";
-import { makeItemEffect } from "repond";
 export { moverRefs, moverState } from "./mover1d";
 export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";
@@ -51,19 +60,19 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
   function startMoverMoveEffect({ itemId }: { itemId: string }) {
     if (!meta.timeElapsedStatePath) return;
 
-    const timeStoreKey = meta.timeElapsedStatePath[0];
-    const timeNameKey = meta.timeElapsedStatePath[1];
-    const timePropKey = meta.timeElapsedStatePath[2];
+    const timeItemType = meta.timeElapsedStatePath[0];
+    const timeItemId = meta.timeElapsedStatePath[1];
+    const timeItemProp = meta.timeElapsedStatePath[2];
 
     const effectId = "moverValueEffect" + store + moverName + moverType + Math.random();
     startNewEffect({
       id: effectId,
       run: () => {
-        const newTimeElapsed = getState()[timeStoreKey][timeNameKey][timePropKey];
-        const prevTimeElapsed = getPrevState()[timeStoreKey][timeNameKey][timePropKey];
+        const newTimeElapsed = getState(timeItemType, timeItemId)[timeItemProp];
+        const prevTimeElapsed = getPrevState(timeItemType, timeItemId)[timeItemProp];
 
-        if (!getState()[store]?.[itemId]?.[isMovingKey]) {
-          stopNewEffect(effectId);
+        if (!getState(store, itemId)?.[isMovingKey]) {
+          stopEffect(effectId);
         } else {
           const timeDuration = newTimeElapsed - prevTimeElapsed;
 
@@ -76,24 +85,21 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
           });
         }
       },
-      check: { type: [timeStoreKey], id: [timeNameKey], prop: [timePropKey] },
+      // check: { type: [timeStoreKey], id: [timeNameKey], prop: [timePropKey] },
+      changes: [`${timeItemType}.${timeItemProp}`],
+      itemIds: [timeItemId],
       step: "moverUpdates", // NOTE may need to change this to run after elapsed time changes, but before other game logic
       atStepEnd: true,
     });
     return effectId;
   }
 
-  const valueGoalChangedEffect = makeItemEffect({
-    run({
-      itemId,
-      itemState,
-      itemRefs,
-    }: {
-      itemId: string;
-      itemState: ItemState<T_ItemType>;
-      itemRefs: ItemRefs<T_ItemType>;
-    }) {
-      setState({ [store]: { [itemId]: { [isMovingKey]: true } } });
+  const valueGoalChangedEffect = makeEffect(
+    (itemId) => {
+      const itemState = getState(store, itemId) as ItemState<T_ItemType>;
+      const itemRefs = getRefs(store, itemId) as ItemRefs<T_ItemType>;
+
+      setState(`${store}.${isMovingKey}`, true, itemId);
       if (moverType === "3d") {
         const moveMode = itemState[moveModePropKey];
         // TEMPORARY : ideally this is automatic for movers? (when isMoving becoems true?)
@@ -101,13 +107,13 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
         if (moveMode === "spring") itemRefs[moverRefsKey].recentSpeeds = [];
       }
     },
-    check: { type: store, prop: (moverName + "Goal") as any },
-    step: "moversGoal" as const,
-    atStepEnd: true,
-  });
+    { isPerItem: true, changes: [`${store}.${moverName}Goal`], step: "moversGoal" as const, atStepEnd: true }
+  );
 
-  const startedMovingEffect = makeItemEffect({
-    run({ itemId }) {
+  const startedMovingEffect = makeEffect(
+    (itemId) => {
+      const newValue = getState(store, itemId)?.[isMovingKey];
+      if (newValue !== true) return;
       // runMoverFunction({ id: itemName, type: store, mover: moverName });
       if (meta.timeElapsedStatePath) {
         startMoverMoveEffect({ itemId: itemId });
@@ -115,10 +121,13 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
         runMoverFunction({ mover: moverName, id: itemId, type: store, autoRerun: true });
       }
     },
-    check: { type: store, prop: isMovingKey as any, becomes: true },
-    step: "moversStart" as const,
-    atStepEnd: true,
-  });
+    {
+      changes: [`${store}.${isMovingKey}`],
+      step: "moversStart" as const,
+      atStepEnd: true,
+      isPerItem: true,
+    }
+  );
 
   return {
     [`${moverName}GoalChanged`]: valueGoalChangedEffect,

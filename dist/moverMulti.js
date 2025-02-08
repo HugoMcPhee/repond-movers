@@ -12,7 +12,7 @@ New options:
 allow interpolating
 refNames.averageSpeed
 */
-import { getRefs, getState, setState } from "repond";
+import { getRefs, getState, onNextTick, setState } from "repond";
 import { defaultOptions, 
 // maximumFrameTime,
 physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
@@ -47,8 +47,8 @@ const rerunOptions = {
 };
 export function runMoverMulti({ frameDuration = 16.6667, type: itemType, id: itemId, mover: moverName, autoRerun, }) {
     // repeated for all movers Start
-    const itemRefs = getRefs()[itemType][itemId];
-    const itemState = getState()[itemType][itemId];
+    const itemRefs = getRefs(itemType, itemId);
+    const itemState = getState(itemType, itemId);
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys = moverRefs.stateNames;
     const animNames = moverRefs.animNames;
@@ -98,22 +98,19 @@ export function runMoverMulti({ frameDuration = 16.6667, type: itemType, id: ite
     });
     // if shouldStopMoving for each anim is true
     if (!shouldKeepGoing) {
-        setState({
-            [itemType]: { [itemId]: { [keys.isMoving]: false } },
-        });
+        setState(`${itemType}.${keys.isMoving}`, false, itemId);
     }
-    setState({ [itemType]: { [itemId]: { [keys.value]: newMoverState } } }, autoRerun
-        ? (nextFrameDuration) => {
-            const newItemState = getState()[itemType][itemId];
-            if (newItemState?.[keys.isMoving]) {
-                rerunOptions.frameDuration = nextFrameDuration;
-                rerunOptions.id = itemId;
-                rerunOptions.type = itemType;
-                rerunOptions.mover = moverName;
-                runMoverMulti(rerunOptions);
-            }
+    setState(`${itemType}.${keys.value}`, newMoverState, itemId);
+    onNextTick((nextFrameDuration) => {
+        const newItemState = getState(itemType, itemId);
+        if (newItemState?.[keys.isMoving]) {
+            rerunOptions.frameDuration = nextFrameDuration;
+            rerunOptions.id = itemId;
+            rerunOptions.type = itemType;
+            rerunOptions.mover = moverName;
+            runMoverMulti(rerunOptions);
         }
-        : undefined);
+    });
 }
 function runMultiPhysicsStep(nowStepState, targetPosition, moveMode = "spring", physicsOptions) {
     const { stiffness, damping, mass, friction } = physicsOptions;

@@ -1,11 +1,11 @@
 import { defaultPosition, Point2D } from "chootils/dist/points2d";
 import { ItemType } from "repond";
 import { MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
-export declare type PositionAndVelocity = {
+export type PositionAndVelocity = {
     position: Point2D;
     velocity: Point2D;
 };
-declare type MainValueType = ReturnType<typeof defaultPosition>;
+type MainValueType = ReturnType<typeof defaultPosition>;
 export declare const mover2dState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
     value?: MainValueType;
     valueGoal?: MainValueType;
@@ -13,7 +13,7 @@ export declare const mover2dState: <T_Name extends string, T_PhysicsNames extend
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
     moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, Point2D> & Record<`${T_Name}Goal`, Point2D> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
+}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, MainValueType> & Record<`${T_Name}Goal`, MainValueType> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 export declare function mover2dRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig): Record<`${T_Name}MoverRefs`, {
     velocity: Point2D;
     recentSpeeds: number[];

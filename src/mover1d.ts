@@ -1,6 +1,6 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
-import { getRefs, getState, setState } from "repond";
+import { getRefs, getState, onNextTick, setState } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -82,8 +82,8 @@ export function runMover1d<T_ItemType extends ItemType>({
 }: // onSlow,
 RunMoverOptions<T_ItemType>) {
   // repeated for all movers Start
-  const itemRefs = (getRefs() as any)[itemType][itemId] as any;
-  const itemState = (getState() as any)[itemType][itemId] as any;
+  const itemRefs = getRefs(itemType, itemId) as any;
+  const itemState = getState(itemType, itemId) as any;
 
   const moverRefs = itemRefs[`${moverName}MoverRefs`];
   const keys: AnyMoverStateNames = moverRefs.stateNames;
@@ -149,27 +149,25 @@ RunMoverOptions<T_ItemType>) {
   }
 
   if (shouldStopMoving) {
-    setState({
-      [itemType]: { [itemId]: { [keys.isMoving]: false, [keys.value]: itemState[keys.valueGoal] } },
-    });
-  } else {
-    setState(
-      { [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } },
-      autoRerun
-        ? (nextFrameDuration) => {
-            const newItemState = (getState() as any)[itemType][itemId];
-            if (newItemState?.[keys.isMoving]) {
-              rerunOptions.frameDuration = nextFrameDuration;
-              rerunOptions.id = itemId;
-              rerunOptions.type = itemType;
-              rerunOptions.mover = moverName;
-              rerunOptions.autoRerun = autoRerun;
+    // console.log("should stop moving");
 
-              runMover1d(rerunOptions);
-            }
-          }
-        : undefined
-    );
+    setState(`${itemType}.${keys.isMoving}`, false, itemId);
+  }
+
+  setState(`${itemType}.${keys.value}`, interpolatedPosition, itemId);
+  if (autoRerun) {
+    onNextTick((nextFrameDuration) => {
+      const newItemState = getState(itemType, itemId);
+      if (newItemState?.[keys.isMoving]) {
+        rerunOptions.frameDuration = nextFrameDuration;
+        rerunOptions.id = itemId;
+        rerunOptions.type = itemType;
+        rerunOptions.mover = moverName;
+        rerunOptions.autoRerun = autoRerun;
+
+        runMover1d(rerunOptions);
+      }
+    });
   }
 }
 

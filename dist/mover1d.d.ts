@@ -1,9 +1,9 @@
 import { ItemType, MoveMode, PhysicsConfig, PhysicsOptions, RunMoverOptions } from "./types";
-export declare type PositionAndVelocity = {
+export type PositionAndVelocity = {
     position: number;
     velocity: number;
 };
-declare type MainValueType = number;
+type MainValueType = number;
 export declare const moverState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
     value?: MainValueType;
     valueGoal?: MainValueType;
@@ -11,7 +11,7 @@ export declare const moverState: <T_Name extends string, T_PhysicsNames extends 
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
     moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, number> & Record<`${T_Name}Goal`, number> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
+}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, MainValueType> & Record<`${T_Name}Goal`, MainValueType> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 export declare function moverRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig): Record<`${T_Name}MoverRefs`, {
     velocity: number;
     recentSpeeds: number[];
