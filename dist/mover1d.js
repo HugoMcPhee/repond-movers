@@ -1,6 +1,6 @@
 import { addToLimitedArray } from "chootils/dist/arrays";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
-import { getRefs, getState, setState } from "repond";
+import { getRefs, getState, onNextTick, setState } from "repond";
 import { defaultOptions, defaultPhysics, 
 // maximumFrameTime,
 physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
@@ -29,8 +29,8 @@ const rerunOptions = {
 };
 export function runMover1d({ frameDuration = 16.6667, type: itemType, id: itemId, mover: moverName, autoRerun, }) {
     // repeated for all movers Start
-    const itemRefs = getRefs()[itemType][itemId];
-    const itemState = getState()[itemType][itemId];
+    const itemRefs = getRefs(itemType, itemId);
+    const itemState = getState(itemType, itemId);
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys = moverRefs.stateNames;
     const nowStepState = {
@@ -79,13 +79,12 @@ export function runMover1d({ frameDuration = 16.6667, type: itemType, id: itemId
     }
     if (shouldStopMoving) {
         // console.log("should stop moving");
-        setState({
-            [itemType]: { [itemId]: { [keys.isMoving]: false } },
-        });
+        setState(`${itemType}.${keys.isMoving}`, false, itemId);
     }
-    setState({ [itemType]: { [itemId]: { [keys.value]: interpolatedPosition } } }, autoRerun
-        ? (nextFrameDuration) => {
-            const newItemState = getState()[itemType][itemId];
+    setState(`${itemType}.${keys.value}`, interpolatedPosition, itemId);
+    if (autoRerun) {
+        onNextTick((nextFrameDuration) => {
+            const newItemState = getState(itemType, itemId);
             if (newItemState?.[keys.isMoving]) {
                 rerunOptions.frameDuration = nextFrameDuration;
                 rerunOptions.id = itemId;
@@ -94,8 +93,8 @@ export function runMover1d({ frameDuration = 16.6667, type: itemType, id: itemId
                 rerunOptions.autoRerun = autoRerun;
                 runMover1d(rerunOptions);
             }
-        }
-        : undefined);
+        });
+    }
 }
 function run1dPhysicsStep(stepState, targetPosition, moveMode = "spring", physicsOptions) {
     const { stiffness, damping, mass, friction } = physicsOptions;

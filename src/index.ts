@@ -8,7 +8,6 @@ import {
   setState,
   startNewEffect,
   stopEffect,
-  stopNewEffect,
 } from "repond";
 import { meta } from "./meta";
 import { runMover1d } from "./mover1d";
@@ -16,7 +15,6 @@ import { runMover2d } from "./mover2d";
 import { runMover3d } from "./mover3d";
 import { runMoverMulti } from "./moverMulti";
 import { ItemRefs, ItemState, MoverType, StateNameProperty } from "./types";
-import { makeItemEffect } from "repond";
 export { moverRefs, moverState } from "./mover1d";
 export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";

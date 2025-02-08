@@ -1,5 +1,5 @@
 import { ItemType, PhysicsConfig, RunMoverOptions } from "./types";
-declare type OneAnimRefs = {
+type OneAnimRefs = {
     velocity: number;
     recentSpeeds: number[];
 };

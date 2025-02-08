@@ -3,7 +3,7 @@ import { addPoints as addPointsImmutable, copyPoint, defaultPosition, interpolat
 import { addPoints, dividePoint, multiplyPoint, subtractPoints } from "chootils/dist/points3dInPlace";
 import { getAverageSpeed } from "chootils/dist/speedAngleDistance";
 import { getSpeedAndAngleFromVector, getVectorFromSpeedAndAngle, getVectorSpeed, } from "chootils/dist/speedAngleDistance3d";
-import { getRefs, getState, setState } from "repond";
+import { getRefs, getState, onNextTick, setState, whenSettingStates } from "repond";
 import { defaultOptions, defaultPhysics, physicsTimestep, physicsTimestepInSeconds, recentSpeedsAmount, } from "./consts";
 import { makeMoverStateMaker, makeStateNames, normalizeDefinedPhysicsConfig } from "./utils";
 const DEFAULT_SPRING_STOP_SPEED = defaultPhysics("3d").stopSpeed;
@@ -32,8 +32,8 @@ const rerunOptions = {
 };
 export function runMover3d({ frameDuration = 16.6667, id: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }) {
     // repeated for all movers Start
-    const itemRefs = getRefs()[itemType][itemId];
-    const itemState = getState()[itemType][itemId];
+    const itemRefs = getRefs(itemType, itemId);
+    const itemState = getState(itemType, itemId);
     const moverRefs = itemRefs[`${moverName}MoverRefs`];
     const keys = moverRefs.stateNames;
     const nowStepState = {
@@ -91,26 +91,17 @@ export function runMover3d({ frameDuration = 16.6667, id: itemId, type: itemType
         }
     }
     if (!shouldKeepMoving)
-        setState({ [itemType]: { [itemId]: { [keys.isMoving]: false } } });
-    setState((state) => {
-        const currentPosition = state[itemType][itemId][keys.value];
+        setState(`${itemType}.${keys.isMoving}`, false, itemId);
+    whenSettingStates(() => {
+        const currentPosition = getState(itemType, itemId)[keys.value];
         const positionDifference = subtractPointsSafer(newPosition, originalPositon);
         const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
-        // console.log("diff", Math.abs(positionDifference.x));
-        // if (moveMode === "push" || moveMode === "slide") {
-        // console.log("moveMode", moveMode);
-        if (pointIsZero(positionDifference)) {
-            return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
+        if (pointIsZero(positionDifference) || pointBasicallyZero(positionDifference)) {
+            setState(`${itemType}.${keys.isMoving}`, false, itemId);
         }
-        if (pointBasicallyZero(positionDifference)) {
-            return { [itemType]: { [itemId]: { [keys.isMoving]: false } } };
-        }
-        // }
-        // console.log(positionDifference, "positionDifference");
-        return {
-            [itemType]: { [itemId]: { [keys.value]: actualNewPosition } },
-        };
-    }, (nextFrameDuration) => {
+        setState(`${itemType}.${keys.value}`, actualNewPosition, itemId);
+    });
+    onNextTick((nextFrameDuration) => {
         if (isAutoMovementType) {
             if (moverRefs.canRunOnSlow && averageSpeed < 150) {
                 moverRefs.canRunOnSlow = false;

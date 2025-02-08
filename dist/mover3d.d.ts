@@ -1,11 +1,11 @@
 import { Point3D, defaultPosition } from "chootils/dist/points3d";
 import { AllRefs, AllState } from "repond";
 import { MoveMode, PhysicsConfig, PhysicsOptions } from "./types";
-export declare type PositionAndVelocity = {
+export type PositionAndVelocity = {
     position: Point3D;
     velocity: Point3D;
 };
-declare type MainValueType = ReturnType<typeof defaultPosition>;
+type MainValueType = ReturnType<typeof defaultPosition>;
 export declare const mover3dState: <T_Name extends string, T_PhysicsNames extends string, T_InitialState extends {
     value?: MainValueType;
     valueGoal?: MainValueType;
@@ -13,7 +13,7 @@ export declare const mover3dState: <T_Name extends string, T_PhysicsNames extend
     moveConfigName?: T_PhysicsNames;
     moveMode?: MoveMode;
     moveConfigs?: Record<T_PhysicsNames, PhysicsOptions>;
-}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, Point3D> & Record<`${T_Name}Goal`, Point3D> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
+}>(newName: T_Name, initialState?: T_InitialState) => Record<T_Name, MainValueType> & Record<`${T_Name}Goal`, MainValueType> & Record<`${T_Name}IsMoving`, boolean> & Record<`${T_Name}MoveMode`, MoveMode> & (T_InitialState["moveConfigName"] extends undefined ? {} : Record<`${T_Name}MoveConfigName`, T_PhysicsNames>) & (T_InitialState["moveConfigs"] extends undefined ? {} : Record<`${T_Name}MoveConfigs`, Record<T_PhysicsNames, PhysicsOptions>>);
 export declare function mover3dRefs<T_Name extends string>(newName: T_Name, config?: PhysicsConfig): Record<`${T_Name}MoverRefs`, {
     velocity: Point3D;
     recentSpeeds: number[];
@@ -29,10 +29,10 @@ export declare function mover3dRefs<T_Name extends string>(newName: T_Name, conf
     };
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
-declare type ItemType = keyof AllState & keyof AllRefs;
-declare type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
-declare type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
-declare type RunMoverOptions<T_ItemType extends ItemType> = {
+type ItemType = keyof AllState & keyof AllRefs;
+type ItemState<T_ItemType extends ItemType> = AllState[T_ItemType][keyof AllState[T_ItemType]];
+type StateNameProperty<T_ItemType extends ItemType> = keyof ItemState<T_ItemType>;
+type RunMoverOptions<T_ItemType extends ItemType> = {
     onSlow?: () => any;
     id: string;
     type: T_ItemType;
