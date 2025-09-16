@@ -17,7 +17,7 @@ import {
   getVectorFromSpeedAndAngle,
   getVectorSpeed,
 } from "chootils/dist/speedAngleDistance2d";
-import { AllRefs, AllState, getRefs, getState, ItemType, onNextTick, setState, whenSettingStates } from "repond";
+import { getRefs, getState, ItemType, onNextTick, setState, whenSettingStates } from "repond";
 import {
   defaultOptions,
   defaultPhysics,
@@ -129,21 +129,24 @@ export function runMover2d<T_ItemType extends ItemType>({
 
   const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
-  while (timeRemainingForPhysics >= physicsTimestep) {
-    // prevStepState = currentStepState;
-    updatePoint(prevStepState.position, nowStepState.position);
-    updatePoint(prevStepState.velocity, nowStepState.velocity);
-    // currentStepState = runPhysicsStep({
-    run2dPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
-    timeRemainingForPhysics -= physicsTimestep;
+  if (moveMode === "slide") {
+    // one exact step for this frame (clamped like 1d)
+    const dtSec = Math.max(0, Math.min(frameDuration, 100)) / 1000;
+    stepSlide2d(nowStepState, physicsOptions.friction, dtSec);
+  } else {
+    while (timeRemainingForPhysics >= physicsTimestep) {
+      updatePoint(prevStepState.position, nowStepState.position);
+      updatePoint(prevStepState.velocity, nowStepState.velocity);
+      run2dPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
+      timeRemainingForPhysics -= physicsTimestep;
+    }
   }
 
   // can just use the current position if interpolating isn't needed
-  const newPosition = interpolatePoints(
-    nowStepState.position,
-    prevStepState.position,
-    timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
-  );
+  const newPosition =
+    moveMode === "slide"
+      ? nowStepState.position // no interpolation needed for the exact step
+      : interpolatePoints(nowStepState.position, prevStepState.position, timeRemainingForPhysics / physicsTimestep);
 
   moverRefs.velocity = nowStepState.velocity;
 
@@ -208,6 +211,37 @@ export function runMover2d<T_ItemType extends ItemType>({
       runMover2d(rerunOptions);
     }
   });
+}
+
+// Exact per-frame slide step (no physics sub-steps)
+export function stepSlide2d(state: { position: Point2D; velocity: Point2D }, friction: number, dtSeconds: number) {
+  // clamp for safety (same bounds as 1d)
+  friction = Math.max(0, Math.min(0.9999, friction));
+
+  const remainPerSecond = 1 - friction;
+  const decay = Math.pow(remainPerSecond, dtSeconds);
+
+  // v1 = v0 * decay  (keep originals in temporaries)
+  const v0 = copyPoint(state.velocity);
+  const v1 = copyPoint(state.velocity);
+  multiplyPoint(v1, decay);
+
+  // exact displacement under exponential decay
+  const k = -Math.log(remainPerSecond);
+
+  // dx = (v0 - v1) / k   (vector form)
+  let dx = subtractPointsSafer(v0, v1);
+  if (k > 1e-6) {
+    dividePoint(dx, k);
+  } else {
+    // near-zero friction → linear fallback
+    dx = v0;
+    multiplyPoint(dx, dtSeconds);
+  }
+
+  // apply
+  addPoints(state.position, dx); // mutate position in-place
+  updatePoint(state.velocity, v1); // keep object identity
 }
 
 // runPhysicsStepObjectPool

@@ -52,17 +52,22 @@ export function runMover3d({ frameDuration = 16.6667, id: itemId, type: itemType
     // repeated for all movers End
     const originalPositon = copyPoint(itemState[keys.value]);
     const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
-    while (timeRemainingForPhysics >= physicsTimestep) {
-        // prevStepState = currentStepState;
-        updatePoint(prevStepState.position, nowStepState.position);
-        updatePoint(prevStepState.velocity, nowStepState.velocity);
-        // currentStepState = runPhysicsStep({
-        run3dPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
-        timeRemainingForPhysics -= physicsTimestep;
+    if (moveMode === "slide") {
+        const dtSec = Math.max(0, Math.min(frameDuration, 100)) / 1000;
+        stepSlide3d(nowStepState, physicsOptions.friction, dtSec);
     }
-    // can just use the current position if interpolating isn't needed
-    const newPosition = interpolatePoints(nowStepState.position, prevStepState.position, timeRemainingForPhysics / physicsTimestep // remainingTimestepPercent
-    );
+    else {
+        while (timeRemainingForPhysics >= physicsTimestep) {
+            updatePoint(prevStepState.position, nowStepState.position);
+            updatePoint(prevStepState.velocity, nowStepState.velocity);
+            run3dPhysicsStep(nowStepState, moveMode, physicsOptions, targetPosition);
+            timeRemainingForPhysics -= physicsTimestep;
+        }
+    }
+    const newPosition = moveMode === "slide"
+        ? nowStepState.position
+        : // can just use the current position if interpolating isn't needed
+            interpolatePoints(nowStepState.position, prevStepState.position, timeRemainingForPhysics / physicsTimestep);
     moverRefs.velocity = nowStepState.velocity;
     // Check shouldKeepMoving
     // note could move this to inside the setState to get latest state and use actualNewPosition
@@ -120,6 +125,26 @@ export function runMover3d({ frameDuration = 16.6667, id: itemId, type: itemType
             runMover3d(rerunOptions);
         }
     });
+}
+// Exact per-frame slide step (no physics sub-steps)
+export function stepSlide3d(state, friction, dtSeconds) {
+    friction = Math.max(0, Math.min(0.9999, friction));
+    const remainPerSecond = 1 - friction;
+    const decay = Math.pow(remainPerSecond, dtSeconds);
+    const v0 = copyPoint(state.velocity);
+    const v1 = copyPoint(state.velocity);
+    multiplyPoint(v1, decay);
+    const k = -Math.log(remainPerSecond);
+    let dx = subtractPointsSafer(v0, v1);
+    if (k > 1e-6) {
+        dividePoint(dx, k);
+    }
+    else {
+        dx = v0;
+        multiplyPoint(dx, dtSeconds);
+    }
+    addPoints(state.position, dx);
+    updatePoint(state.velocity, v1);
 }
 // runPhysicsStepObjectPool
 const pool = {

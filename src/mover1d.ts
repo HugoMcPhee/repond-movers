@@ -113,6 +113,19 @@ RunMoverOptions<T_ItemType>) {
 
   const springStopSpeed = physicsOptions.stopSpeed ?? DEFAULT_SPRING_STOP_SPEED;
 
+  if (moveMode === "slide") {
+    const dtSec = Math.max(0, Math.min(frameDuration, 100)) / 1000;
+
+    stepSlide1d(nowStepState, physicsOptions.friction, dtSec);
+  } else {
+    while (timeRemainingForPhysics >= physicsTimestep) {
+      // prevStepState = currentStepState;
+      // currentStepState = runPhysicsStep(
+      run1dPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
+      timeRemainingForPhysics -= physicsTimestep;
+    }
+  }
+
   while (timeRemainingForPhysics >= physicsTimestep) {
     // prevStepState = currentStepState;
     // currentStepState = runPhysicsStep(
@@ -169,6 +182,28 @@ RunMoverOptions<T_ItemType>) {
       }
     });
   }
+}
+
+export function stepSlide1d(state: { position: number; velocity: number }, friction: number, dtSeconds: number) {
+  // clamp for safety
+  friction = Math.max(0, Math.min(0.9999, friction));
+
+  // remaining fraction of velocity after 1 second
+  const remainPerSecond = 1 - friction;
+
+  // remaining fraction after dt seconds
+  const decay = Math.pow(remainPerSecond, dtSeconds);
+
+  const v0 = state.velocity;
+  const v1 = v0 * decay;
+
+  // exact displacement under exponential decay:
+  // v(t) = v0 * e^(-k t), with k = -ln(remainPerSecond)
+  const k = -Math.log(remainPerSecond);
+  const dx = k > 1e-6 ? (v0 - v1) / k : v0 * dtSeconds; // fallback when k≈0
+
+  state.position += dx;
+  state.velocity = v1;
 }
 
 function run1dPhysicsStep(

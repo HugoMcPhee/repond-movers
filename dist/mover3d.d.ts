@@ -41,4 +41,8 @@ type RunMoverOptions<T_ItemType extends ItemType> = {
     autoRerun?: boolean;
 };
 export declare function runMover3d<T_ItemType extends ItemType>({ frameDuration, id: itemId, type: itemType, onSlow, mover: moverName, autoRerun, }: RunMoverOptions<T_ItemType>): void;
+export declare function stepSlide3d(state: {
+    position: Point3D;
+    velocity: Point3D;
+}, friction: number, dtSeconds: number): void;
 export {};

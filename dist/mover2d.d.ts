@@ -30,4 +30,8 @@ export declare function mover2dRefs<T_Name extends string>(newName: T_Name, conf
     physicsConfigs: import("./types").DefinedPhysicsConfig;
 }>;
 export declare function runMover2d<T_ItemType extends ItemType>({ frameDuration, id: itemId, type: itemType, mover: moverName, autoRerun, onSlow, }: RunMoverOptions<T_ItemType>): void;
+export declare function stepSlide2d(state: {
+    position: Point2D;
+    velocity: Point2D;
+}, friction: number, dtSeconds: number): void;
 export {};
