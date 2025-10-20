@@ -84,3 +84,11 @@ export type RunMoverOptions<T_ItemType extends ItemType> = {
   mover: StateNameProperty<T_ItemType> & string;
   autoRerun?: boolean; // if it should automatically start the next frame, otherwise it will run when elapsedTime changes
 };
+
+// Time key configuration for initMovers
+export type TimeKeyConfig = Record<string, readonly [string, string, string]>;
+
+// Options for addMoverEffects
+export type MoverEffectOptions = {
+  timeKey?: string;
+};

@@ -3,6 +3,15 @@ TODO
 - update mover2d to check distance and shouldKeepMoving speed, so it dosen't trigger from average speed at the start
 - use position pool objects where copyPoint is used, (like for prevStepState & currentStepState)
 
+v1.2.0
+
+- Added support for multiple time sources (time keys)
+  - `initMovers` now accepts an object with named time keys: `initMovers({ default: [...], game: [...], ui: [...] })`
+  - `addMoverEffects` accepts optional `timeKey` parameter to assign movers to specific time sources
+  - Enables independent time control for different animation layers (e.g., pause game while UI continues)
+  - Fully backward compatible with existing array-style `initMovers([...])` syntax
+- Updated to repond ^1.2.0
+
 v1.0.1
 
 v1.0.0

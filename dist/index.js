@@ -9,8 +9,19 @@ export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";
 export { moverMultiRefs } from "./moverMulti";
 export { makeMoverStateMaker } from "./utils";
-export function initMovers(timeElapsedStatePath) {
-    meta.timeElapsedStatePath = timeElapsedStatePath;
+// Implementation
+export function initMovers(timeConfig) {
+    if (Array.isArray(timeConfig)) {
+        // Backward compatibility: treat array as "default" time key
+        meta.timePaths = { default: timeConfig };
+        meta.timeElapsedStatePath = timeConfig; // Keep deprecated field
+    }
+    else if (timeConfig) {
+        // New behavior: store multiple time keys
+        meta.timePaths = timeConfig;
+        // Set deprecated field to "default" for backward compat
+        meta.timeElapsedStatePath = timeConfig.default;
+    }
 }
 const runMoverFunctionsByType = {
     "1d": runMover1d,
@@ -18,7 +29,17 @@ const runMoverFunctionsByType = {
     "3d": runMover3d,
     multi: runMoverMulti,
 };
-export function addMoverEffects(store, moverName, moverType = "1d") {
+export function addMoverEffects(store, moverName, moverType = "1d", options) {
+    const timeKey = options?.timeKey ?? "default";
+    const moverKey = `${store}.${moverName}`;
+    // Store the time key assignment for this mover
+    meta.moverTimeKeys[moverKey] = timeKey;
+    // Validate time key exists (only warn if explicitly set by user)
+    if (options?.timeKey && !meta.timePaths[timeKey]) {
+        console.warn(`[repond-movers] Time key "${timeKey}" not found in timePaths. ` +
+            `Available keys: ${Object.keys(meta.timePaths).join(", ")}. ` +
+            `Mover "${moverKey}" may not animate.`);
+    }
     const isMovingKey = `${moverName}IsMoving`;
     const moveModePropKey = `${moverName}MoveMode`;
     const moverRefsKey = `${moverName}MoverRefs`;
@@ -28,11 +49,15 @@ export function addMoverEffects(store, moverName, moverType = "1d") {
     // and each time, if isMoving is true, run the mover again
     // if it's false, remove the effect
     function startMoverMoveEffect({ itemId }) {
-        if (!meta.timeElapsedStatePath)
+        const moverKey = `${store}.${moverName}`;
+        const timeKey = meta.moverTimeKeys[moverKey] ?? "default";
+        const timePath = meta.timePaths[timeKey];
+        if (!timePath) {
+            console.error(`[repond-movers] No time path found for time key "${timeKey}". ` +
+                `Mover "${moverKey}" cannot animate.`);
             return;
-        const timeItemType = meta.timeElapsedStatePath[0];
-        const timeItemId = meta.timeElapsedStatePath[1];
-        const timeItemProp = meta.timeElapsedStatePath[2];
+        }
+        const [timeItemType, timeItemId, timeItemProp] = timePath;
         const effectId = "moverValueEffect" + store + moverName + moverType + Math.random();
         startNewEffect({
             id: effectId,
@@ -77,11 +102,15 @@ export function addMoverEffects(store, moverName, moverType = "1d") {
         const newValue = getState(store, itemId)?.[isMovingKey];
         if (newValue !== true)
             return;
-        // runMoverFunction({ id: itemName, type: store, mover: moverName });
-        if (meta.timeElapsedStatePath) {
+        const moverKey = `${store}.${moverName}`;
+        const timeKey = meta.moverTimeKeys[moverKey] ?? "default";
+        const timePath = meta.timePaths[timeKey];
+        if (timePath) {
+            // Use time-based effect if time path exists
             startMoverMoveEffect({ itemId: itemId });
         }
         else {
+            // Fallback to auto-rerun mode (no time control)
             runMoverFunction({ mover: moverName, id: itemId, type: store, autoRerun: true });
         }
     }, {

@@ -14,24 +14,39 @@ import { runMover1d } from "./mover1d";
 import { runMover2d } from "./mover2d";
 import { runMover3d } from "./mover3d";
 import { runMoverMulti } from "./moverMulti";
-import { ItemRefs, ItemState, MoverType, StateNameProperty } from "./types";
+import { ItemRefs, ItemState, MoverType, StateNameProperty, TimeKeyConfig, MoverEffectOptions } from "./types";
 export { moverRefs, moverState } from "./mover1d";
 export { mover2dRefs, mover2dState } from "./mover2d";
 export { mover3dRefs, mover3dState } from "./mover3d";
 export { moverMultiRefs } from "./moverMulti";
 export { makeMoverStateMaker } from "./utils";
 
+// Overload for new TimeKeyConfig (object with named time keys)
+export function initMovers(timeConfig: TimeKeyConfig): void;
+
+// Overload for backward compatibility (single time path array)
 export function initMovers<
   T_PathItemType extends keyof AllState & string,
   T_PathItemName extends keyof AllState[T_PathItemType] & string,
   T_PathItemProperty extends keyof AllState[T_PathItemType][T_PathItemName] & string
-  // repond store helpers
 >(
-  timeElapsedStatePath?:
+  timeElapsedStatePath:
     | [T_PathItemType, T_PathItemName, T_PathItemProperty]
     | readonly [T_PathItemType, T_PathItemName, T_PathItemProperty]
-) {
-  meta.timeElapsedStatePath = timeElapsedStatePath as string[];
+): void;
+
+// Implementation
+export function initMovers(timeConfig?: any) {
+  if (Array.isArray(timeConfig)) {
+    // Backward compatibility: treat array as "default" time key
+    meta.timePaths = { default: timeConfig as [string, string, string] };
+    meta.timeElapsedStatePath = timeConfig; // Keep deprecated field
+  } else if (timeConfig) {
+    // New behavior: store multiple time keys
+    meta.timePaths = timeConfig;
+    // Set deprecated field to "default" for backward compat
+    meta.timeElapsedStatePath = timeConfig.default;
+  }
 }
 const runMoverFunctionsByType = {
   "1d": runMover1d,
@@ -43,8 +58,24 @@ const runMoverFunctionsByType = {
 export function addMoverEffects<T_ItemType extends ItemType, T_Name extends StateNameProperty<T_ItemType>>(
   store: T_ItemType,
   moverName: T_Name,
-  moverType: MoverType = "1d"
+  moverType: MoverType = "1d",
+  options?: MoverEffectOptions
 ) {
+  const timeKey = options?.timeKey ?? "default";
+  const moverKey = `${store}.${moverName}`;
+
+  // Store the time key assignment for this mover
+  meta.moverTimeKeys[moverKey] = timeKey;
+
+  // Validate time key exists (only warn if explicitly set by user)
+  if (options?.timeKey && !meta.timePaths[timeKey]) {
+    console.warn(
+      `[repond-movers] Time key "${timeKey}" not found in timePaths. ` +
+        `Available keys: ${Object.keys(meta.timePaths).join(", ")}. ` +
+        `Mover "${moverKey}" may not animate.`
+    );
+  }
+
   const isMovingKey = `${moverName}IsMoving`;
   const moveModePropKey = `${moverName}MoveMode`;
   const moverRefsKey = `${moverName}MoverRefs`;
@@ -58,11 +89,19 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
   // if it's false, remove the effect
 
   function startMoverMoveEffect({ itemId }: { itemId: string }) {
-    if (!meta.timeElapsedStatePath) return;
+    const moverKey = `${store}.${moverName}`;
+    const timeKey = meta.moverTimeKeys[moverKey] ?? "default";
+    const timePath = meta.timePaths[timeKey];
 
-    const timeItemType = meta.timeElapsedStatePath[0];
-    const timeItemId = meta.timeElapsedStatePath[1];
-    const timeItemProp = meta.timeElapsedStatePath[2];
+    if (!timePath) {
+      console.error(
+        `[repond-movers] No time path found for time key "${timeKey}". ` +
+          `Mover "${moverKey}" cannot animate.`
+      );
+      return;
+    }
+
+    const [timeItemType, timeItemId, timeItemProp] = timePath;
 
     const effectId = "moverValueEffect" + store + moverName + moverType + Math.random();
     startNewEffect({
@@ -114,10 +153,16 @@ export function addMoverEffects<T_ItemType extends ItemType, T_Name extends Stat
     (itemId) => {
       const newValue = getState(store, itemId)?.[isMovingKey];
       if (newValue !== true) return;
-      // runMoverFunction({ id: itemName, type: store, mover: moverName });
-      if (meta.timeElapsedStatePath) {
+
+      const moverKey = `${store}.${moverName}`;
+      const timeKey = meta.moverTimeKeys[moverKey] ?? "default";
+      const timePath = meta.timePaths[timeKey];
+
+      if (timePath) {
+        // Use time-based effect if time path exists
         startMoverMoveEffect({ itemId: itemId });
       } else {
+        // Fallback to auto-rerun mode (no time control)
         runMoverFunction({ mover: moverName, id: itemId, type: store, autoRerun: true });
       }
     },

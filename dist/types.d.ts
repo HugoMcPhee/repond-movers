@@ -54,4 +54,8 @@ export type RunMoverOptions<T_ItemType extends ItemType> = {
     mover: StateNameProperty<T_ItemType> & string;
     autoRerun?: boolean;
 };
+export type TimeKeyConfig = Record<string, readonly [string, string, string]>;
+export type MoverEffectOptions = {
+    timeKey?: string;
+};
 export {};

@@ -263,6 +263,47 @@ setState("ticker", { elapsed: previousTime + (frameDelta * slowMotionFactor) }, 
 // Simply stop updating the elapsed time state
 ```
 
+### Multiple Time Sources (Time Keys)
+
+**New in v1.2.0**: Use different elapsed time states for different movers. Perfect for pausing game animations while keeping UI animations running, or controlling different animation layers independently.
+
+```typescript
+// 1. Setup multiple named time sources
+initMovers({
+  default: ["app", "ticker", "elapsed"],    // Fallback
+  game: ["game", "ticker", "elapsed"],      // Game world time
+  ui: ["ui", "ticker", "elapsed"]           // UI time (always running)
+});
+
+// 2. Assign time keys to movers
+addMoverEffects("character", "position", "3d", { timeKey: "game" });
+addMoverEffects("button", "opacity", "1d", { timeKey: "ui" });
+addMoverEffects("background", "scale", "2d"); // Uses "default"
+
+// 3. Control time independently
+function gameLoop() {
+  const now = Date.now();
+
+  // Always update UI time
+  setState("ui", { elapsed: now }, "ticker");
+
+  // Only update game time when not paused
+  if (!isPaused) {
+    setState("game", { elapsed: now }, "ticker");
+  }
+
+  // Result: Character animations freeze when paused, UI continues
+}
+```
+
+**Use Cases:**
+- Pause gameplay while UI animations continue
+- Slow-motion effects on specific animation layers
+- Independent time control for cutscenes vs gameplay
+- Different physics simulation speeds (particles, background, etc.)
+
+**Backward Compatibility:** Existing code using `initMovers([...])` continues to work - the array format sets the "default" time key automatically.
+
 ### Direct Mover Control
 
 For advanced use cases, run movers directly without effects:
@@ -286,8 +327,21 @@ runMover("2d", {
 ### Initialization
 
 ```typescript
-// Optional: Enable time-based animation control
+// Single time source (backward compatible)
 initMovers(timeElapsedStatePath?: [itemType, itemId, propertyName]);
+
+// Multiple time sources (v1.2.0+)
+initMovers(timeConfig: {
+  default: [itemType, itemId, propertyName],
+  [key: string]: [itemType, itemId, propertyName]
+});
+
+// Example:
+initMovers({
+  default: ["app", "ticker", "elapsed"],
+  game: ["game", "ticker", "elapsed"],
+  ui: ["ui", "ticker", "elapsed"]
+});
 ```
 
 ### Creating Movers
@@ -323,8 +377,14 @@ moverMultiRefs(name: string, config?: PhysicsConfig)
 addMoverEffects(
   itemType: string,
   moverName: string,
-  moverType: "1d" | "2d" | "3d" | "multi"
+  moverType: "1d" | "2d" | "3d" | "multi",
+  options?: {
+    timeKey?: string  // Optional: specify which time source to use (v1.2.0+)
+  }
 )
+
+// Example:
+addMoverEffects("character", "position", "3d", { timeKey: "game" });
 ```
 
 ### Running Movers Directly
@@ -480,6 +540,7 @@ setState("sprite", {
 - [REPOND_README.md](REPOND_README.md) - Learn about Repond state management
 - [CLAUDE.md](CLAUDE.md) - AI agent context and comprehensive reference
 - [LEARNING_NOTES.md](LEARNING_NOTES.md) - Detailed codebase exploration notes
+- [TIME_KEYS_PLAN.md](TIME_KEYS_PLAN.md) - Implementation details for time keys feature (v1.2.0+)
 
 ---
 
