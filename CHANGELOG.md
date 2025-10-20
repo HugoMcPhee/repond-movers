@@ -12,6 +12,10 @@ v1.2.0
   - Fully backward compatible with existing array-style `initMovers([...])` syntax
 - Updated to repond ^1.2.0
 
+v1.1.0
+
+- Update slide mover to be more icy/slippery
+
 v1.0.1
 
 v1.0.0
