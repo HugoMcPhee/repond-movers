@@ -8,7 +8,7 @@ This document provides comprehensive context for AI agents (like Claude, ChatGPT
 
 **repond-movers** is a physics-based animation library that extends Repond (a high-performance entity state management system) with smooth, realistic motion capabilities using spring physics and friction-based sliding.
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **License**: MIT
 **Dependencies**: repond ^1.2.0, chootils ^0.3.9
 
@@ -189,7 +189,7 @@ newState: () => ({
 })
 
 // Refs
-moverMultiRefs("blendShapes", { stiffness: 25, damping: 10 })
+moverMultiRefs("blendShapes", ["smile", "blink", "speak"], { stiffness: 25, damping: 10 })
 ```
 
 ### Adding Effects
@@ -447,6 +447,124 @@ console.log(refs.recentSpeeds); // Speed history (max 10)
 - **Scalability**: Handles hundreds to thousands of movers
 
 **Note**: Only processes movers that are currently moving (isMoving=true).
+
+---
+
+## Implementation Differences Between Mover Types
+
+### Position Update Strategy
+
+**CRITICAL DIFFERENCE**: Movers use different strategies for updating position:
+
+**1D & Multi**: Direct value assignment
+```typescript
+setState(`${itemType}.${keys.value}`, newPosition, itemId);
+```
+
+**2D & 3D**: Additive delta calculation
+```typescript
+whenSettingStates(() => {
+  const currentPosition = getState(itemType, itemId)[keys.value];
+  const positionDifference = subtractPointsSafer(newPosition, originalPosition);
+  const actualNewPosition = addPointsImmutable(currentPosition, positionDifference);
+  setState(`${itemType}.${keys.value}`, actualNewPosition, itemId);
+});
+```
+
+**Why This Matters**: The additive approach in 2D/3D allows **multiple concurrent movers** to affect the same property (their deltas are summed). In 1D/Multi, concurrent movers would overwrite each other.
+
+### Stopping Detection Logic
+
+Each mover type has **different** stopping logic:
+
+| Mover Type | Stopping Criteria |
+|------------|------------------|
+| **1D** | Average speed < stopSpeed |
+| **2D** | Average speed < stopSpeed AND no zero-movement detected |
+| **3D** | Average speed < stopSpeed AND manhattan distance < 0.15 OR zero-movement detected |
+| **Multi** | ALL individual animations: average speed < stopSpeed AND near target |
+
+### Interpolation Status
+
+| Mover Type | Interpolation | Notes |
+|------------|---------------|-------|
+| **1D** | ❌ Disabled | Commented out due to iPad issues (line 132-145) |
+| **2D** | ✅ Enabled for spring<br>❌ Disabled for slide | Slide uses exact single-step calculation |
+| **3D** | ✅ Enabled for spring<br>❌ Disabled for slide | Slide uses exact single-step calculation |
+| **Multi** | ❌ No interpolation | Uses direct position after substeps |
+
+### Batching Optimization
+
+| Mover Type | Uses whenSettingStates | Purpose |
+|------------|------------------------|---------|
+| **1D** | ❌ No | Likely oversight |
+| **2D** | ✅ Yes | Batches state updates, enables additive deltas |
+| **3D** | ✅ Yes | Batches state updates, enables additive deltas |
+| **Multi** | ❌ No | Directly sets all values |
+
+---
+
+## Undocumented Refs Properties
+
+### All Movers
+- `stateNames`: Generated property names (e.g., `{ value: "position", valueGoal: "positionGoal", ... }`)
+- `physicsConfigs`: Normalized physics configurations
+- `recentSpeeds`: Array of recent frame speeds (max 10) for stopping detection
+
+### 1D & Multi Only
+- `velocity`: Single number
+
+### 2D & 3D Only
+- `velocity`: Point2D/Point3D object
+- `averageSpeed`: Current calculated average speed (useful for debugging/inspection)
+- `canRunOnSlow`: Boolean flag for onSlow callback (resets each animation)
+
+### Multi Only
+- `animRefs`: Record of per-animation refs `{ [animName]: { velocity, recentSpeeds } }`
+- `animNames`: Array of animation names
+
+---
+
+## Hardcoded Thresholds & Magic Numbers
+
+These values are **not configurable** via physics config:
+
+| Constant | Value | Location | Purpose |
+|----------|-------|----------|---------|
+| **onSlow threshold** | `150` | mover2d.ts:193, mover3d.ts:214 | Triggers onSlow callback when average speed drops below |
+| **3D close distance** | `0.15` | mover3d.ts:190 | Manhattan distance threshold for "close enough to target" |
+| **1D/Multi near target** | `0.01` | mover1d.ts:155, moverMulti.ts:146 | Absolute distance threshold for "near target" |
+| **Slide min speed** | `0.003` | mover1d.ts:157, moverMulti.ts:147 | Minimum speed before stopping in slide mode |
+| **Recent speeds count** | `10` | consts.ts:9 | Number of frames averaged for stopping detection |
+| **Frame time clamp** | `100ms` | mover1d:117, mover2d:134, mover3d:144 | Maximum frame time for slide mode calculation |
+
+---
+
+## onSlow Callback (Partially Implemented)
+
+**Status**: Working in 2D/3D movers only (not in 1D/Multi)
+
+**How to use**:
+```typescript
+runMover("2d", {
+  itemType: "sprite",
+  itemId: "sprite1",
+  name: "position",
+  frameDuration: 16.667,
+  onSlow: () => {
+    console.log("Mover slowed down significantly!");
+    // e.g., trigger visual effect when drag-and-drop item nearly stops
+  }
+});
+```
+
+**Behavior**:
+- Only triggers when `averageSpeed < 150`
+- Triggers **once per animation** (canRunOnSlow flag prevents re-triggering)
+- Only works in **auto-rerun mode** (not effect-driven mode)
+- **NOT available** via `addMoverEffects` API (must use `runMover` directly)
+
+**Original Use Case**: Drag-and-drop items that visually "shrink" or "settle" as they slow down before stopping.
 
 ---
 

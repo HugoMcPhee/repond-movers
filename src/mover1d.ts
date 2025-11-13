@@ -126,13 +126,6 @@ RunMoverOptions<T_ItemType>) {
     }
   }
 
-  while (timeRemainingForPhysics >= physicsTimestep) {
-    // prevStepState = currentStepState;
-    // currentStepState = runPhysicsStep(
-    run1dPhysicsStep(nowStepState, targetPosition, moveMode, physicsOptions);
-    timeRemainingForPhysics -= physicsTimestep;
-  }
-
   // TODO maybe set the new position based on the current position like mover 3d
   let interpolatedPosition = nowStepState.position;
 

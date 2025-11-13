@@ -3,7 +3,7 @@
 ## Overview
 **repond-movers** is a physics-based animation library that integrates with Repond state management to provide smooth, realistic animations using spring physics and friction-based sliding.
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Core Dependencies**: repond ^1.2.0, chootils ^0.3.9
 
 ---
