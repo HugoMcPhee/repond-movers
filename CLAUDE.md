@@ -8,7 +8,7 @@ This document provides comprehensive context for AI agents (like Claude, ChatGPT
 
 **repond-movers** is a physics-based animation library that extends Repond (a high-performance entity state management system) with smooth, realistic motion capabilities using spring physics and friction-based sliding.
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **License**: MIT
 **Dependencies**: repond ^1.2.0, chootils ^0.3.9
 

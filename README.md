@@ -540,7 +540,6 @@ setState("sprite", {
 - [REPOND_README.md](REPOND_README.md) - Learn about Repond state management
 - [CLAUDE.md](CLAUDE.md) - AI agent context and comprehensive reference
 - [LEARNING_NOTES.md](LEARNING_NOTES.md) - Detailed codebase exploration notes
-- [TIME_KEYS_PLAN.md](TIME_KEYS_PLAN.md) - Implementation details for time keys feature (v1.2.0+)
 
 ---
 
