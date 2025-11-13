@@ -195,7 +195,7 @@ const characterStore = {
     blendShapesMoveMode: "spring" as const,
   }),
   newRefs: () => ({
-    ...moverMultiRefs("blendShapes", { stiffness: 25, damping: 10 }),
+    ...moverMultiRefs("blendShapes", ["smile", "blink", "speak"], { stiffness: 25, damping: 10 }),
   }),
 };
 
@@ -368,7 +368,8 @@ mover3dRefs(name: string, config?: PhysicsConfig)
 // Multi Mover
 import { moverMultiRefs } from "repond-movers";
 
-moverMultiRefs(name: string, config?: PhysicsConfig)
+moverMultiRefs(name: string, animNames: string[], config?: PhysicsConfig)
+// Note: animNames must match the property names in your state object
 ```
 
 ### Adding Effects
@@ -532,6 +533,14 @@ setState("sprite", {
   positionMoveMode: "slide" // Switches from spring to slide, keeps velocity
 });
 ```
+
+**Important differences between mover types:**
+- **2D/3D movers** use additive position updates, allowing multiple concurrent movers on the same property
+- **1D/Multi movers** directly set values and will overwrite each other
+- **Stopping detection** varies: 3D is more sophisticated with distance checks, 2D checks for zero-movement, 1D is simple speed-based
+- **moverMultiRefs** requires an array of animation names: `moverMultiRefs("name", ["anim1", "anim2"], config)`
+
+For comprehensive implementation details, see [CLAUDE.md - Implementation Differences](CLAUDE.md#implementation-differences-between-mover-types)
 
 ---
 
